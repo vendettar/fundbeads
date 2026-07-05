@@ -91,7 +91,9 @@ The first screen should be the tool itself. Users need to upload an image, choos
 
 ## Colors
 
-The palette uses warm paper-like surfaces, teal primary controls, amber secondary states, and red-orange accent/destructive states. The UI should not become a one-hue theme; bead colors already introduce many hues inside the grid.
+The default Classic palette uses warm paper-like surfaces, teal primary controls, amber secondary states, and red-orange accent/destructive states. The UI should not become a one-hue theme; bead colors already introduce many hues inside the grid.
+
+`DESIGN.md` owns the generated default theme tokens. Named runtime themes may override the same `--beads-*` variables in application CSS, but they must preserve contrast for upload controls, selectors, grid axes, error text, and summary counts.
 
 - **Background** is the page canvas.
 - **Card** is for tool panels, grid containers, and summaries.
@@ -110,7 +112,7 @@ Avoid oversized headings inside compact tool surfaces. The grid is the visual ce
 
 The upload and resolution controls stay at the top. The generated pattern grid is the primary workspace and should receive most of the viewport width. Summary statistics follow the grid so users can inspect the chart before reading bead totals.
 
-The pattern grid should scroll horizontally when needed. Do not shrink cells below readable code size just to fit the viewport.
+The pattern grid should default to fit-to-screen viewing and provide explicit zoom controls for detail inspection. Do not shrink the base cell contract below readable code size just to fit the viewport.
 
 ## Grid Rules
 
@@ -124,8 +126,10 @@ Buttons should use semantic Tailwind classes such as `bg-primary text-primary-fo
 
 Panels and summaries should use `bg-card`, `bg-background`, `text-foreground`, `text-muted-foreground`, and `border-border`. Hardcoded colors in JSX should be limited to actual bead colors from the palette.
 
+Language and theme selectors are tool controls, not marketing navigation. Keep them compact, labeled, and close to the upload and resolution controls.
+
 ## Do's and Don'ts
 
 Do keep the UI compact, readable, and tool-first. Do use generated design tokens. Do preserve contrast for bead codes and axes.
 
-Do not hand-edit `frontend/src/design-theme.generated.css`. Do not add marketing hero layouts before the working tool. Do not introduce decorative wrappers that make the grid harder to use.
+Do not hand-edit `frontend/src/design-theme.generated.css`. Do not add marketing hero layouts before the working tool. Do not introduce decorative wrappers that make the grid harder to use. Do not load themes, translations, or palette labels from remote services.

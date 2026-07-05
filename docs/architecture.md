@@ -13,6 +13,7 @@ graph TD
     PatternLogic --> Palette["Mock MARD palette"]
     PatternLogic --> Grid["Labeled pattern grid"]
     PatternLogic --> Summary["Color usage summary"]
+    ReactApp --> Preferences["Optional localStorage preferences"]
 ```
 
 There is no backend service. The production Docker image serves static files with nginx.
@@ -30,9 +31,12 @@ There is no backend service. The production Docker image serves static files wit
 ## Source-of-Truth Map
 
 - `frontend/src/App.tsx`: Single-page workflow, upload controls, resolution selector, grid rendering, and summary rendering.
+- `frontend/src/i18n.tsx`: Locale allowlist, static translation dictionaries, localized display-only palette labels, and i18n provider.
+- `frontend/src/themes.tsx`: Theme allowlist, static theme ids, and theme preference provider.
+- `frontend/src/browser-storage.ts`: Safe optional access to browser `localStorage`.
 - `frontend/src/pattern.ts`: `GridSize`, `Pattern`, `PatternCell`, `ColorUsage`, image sampling, RGB matching, readable text color, and count summaries.
 - `frontend/src/palette.ts`: Current hardcoded mock MARD palette subset.
-- `frontend/src/styles.css`: Tailwind v4 semantic token mapping.
+- `frontend/src/styles.css`: Tailwind v4 semantic token mapping and named runtime theme overrides.
 - `frontend/src/design-theme.generated.css`: Generated CSS variables from `DESIGN.md`. Do not edit directly.
 - `scripts/generate-design-theme.mjs`: Design token generation script.
 - `docs/pattern-processing.md`: Pattern-processing contract.
@@ -51,20 +55,27 @@ There is no backend service. The production Docker image serves static files wit
 8. Usage counts are derived from the generated cells.
 9. React renders the grid and summary.
 
+Language and theme preferences are independent of pattern processing. They are read from browser `localStorage` when available, validated against source-defined allowlists, and ignored if storage is blocked or contains unsupported values.
+
 ## Contracts
 
 - Supported grid sizes are `52`, `64`, and `78`.
 - `BeadColor.code` is the stable color identity.
 - `BeadColor.label` is display copy.
+- Localized palette labels are display-only and keyed by `BeadColor.code`.
 - `PatternCell.x` and `PatternCell.y` are 1-based.
 - `Pattern.totalBeads` equals `Pattern.cells.length`.
 - For complete generated patterns, `Pattern.totalBeads` equals `size * size`.
 - `ColorUsage.count` is derived from pattern cells, never from formatted UI text.
+- Supported locales are `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
+- Supported theme ids are `classic`, `midnight`, `ocean`, `candy`, and `mono`.
 
 ## Boundaries
 
 - Uploaded images must not leave the browser.
+- Themes, translations, and palette display labels are bundled static source data.
 - The app must not add a backend, database, image upload service, or remote image processor without an explicit product decision.
+- The app must not load remote translations, remote themes, telemetry, or CDN UI assets without an explicit product decision.
 - Palette data is currently a mock subset, not a verified full 221-color MARD dataset.
 - Export and print flows are backlog items, not current runtime surfaces.
 

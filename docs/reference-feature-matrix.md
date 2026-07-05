@@ -17,6 +17,10 @@ This document records current Fundbeads capability and backlog implications. It 
 | Counting lines | Stronger 5/10 helper lines in grid cells and axes. | `Row` styling | Visual verification required for grid changes. |
 | Pattern zoom | Zoom in/out buttons plus Ctrl/Command + wheel while over the grid. | `PatternGrid` | Touch zoom is a backlog improvement. |
 | Color usage summary | Swatch, MARD code, label, count, and total summary. | `summarizeCells`, `ColorSummary` | Counts must derive from cells. |
+| UI languages | English, Simplified Chinese, Traditional Chinese, Japanese, Korean, and Spanish. | `frontend/src/i18n.tsx` | New locales require complete dictionaries and placeholder parity. |
+| Palette display labels | Localized display labels for the current mock palette. MARD codes stay untranslated. | `paletteLabels` in `frontend/src/i18n.tsx` | Full palette migration must include label coverage by code. |
+| Runtime themes | Classic, Midnight, Ocean, Candy, and Mono. | `frontend/src/themes.tsx`, `frontend/src/styles.css` | New themes require allowlist tests and contrast review. |
+| Preferences | Language and theme stored only in browser `localStorage` when available. | `frontend/src/browser-storage.ts` | Must remain optional and safe when storage is blocked. |
 | Printable export | Not implemented. | Future instruction | See `agent/instructions/future/002-printable-pattern-export.md`. |
 | Full MARD 221 colors | Not implemented. | Future instruction | See `agent/instructions/future/001-full-mard-221-palette.md`. |
 | Static deployment | Supported through Vite build and nginx Docker runtime. | `Dockerfile`, `docker-compose.yml` | No backend service. |
@@ -28,6 +32,8 @@ This document records current Fundbeads capability and backlog implications. It 
 - The default fit-to-screen view may make dense grids too small to read on small displays; zoom controls are the intended detail path.
 - Color matching is deterministic but only as accurate as the mock palette data.
 - Source images are stretched into a square grid. This is acceptable for the MVP but should be revisited before export polish.
+- Locale strings can expand significantly; selectors and compact controls should be checked when adding copy.
+- Theme changes can reduce contrast if new token sets are not reviewed against grid axes, controls, summary text, and errors.
 - Local-only processing must remain true as dependencies and export flows are added.
 
 ## Backlog Implications

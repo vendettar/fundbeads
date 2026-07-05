@@ -28,14 +28,15 @@ This document records durable product, architecture, runtime, and design decisio
 
 ## 3. DESIGN.md Token Generation
 
-**Decision**: `DESIGN.md` is the source for theme tokens, and `scripts/generate-design-theme.mjs` generates `frontend/src/design-theme.generated.css`.
+**Decision**: `DESIGN.md` is the source for default Classic theme tokens, and `scripts/generate-design-theme.mjs` generates `frontend/src/design-theme.generated.css`.
 
 **Rationale**: A lintable design source keeps docs, design intent, and CSS variables aligned.
 
 **Implications**:
 
 - Do not hand-edit `frontend/src/design-theme.generated.css`.
-- Theme-token changes require `pnpm design:generate`.
+- Default theme-token changes require `pnpm design:generate`.
+- Named runtime themes override the generated `--beads-*` variables in application CSS.
 - Broad verification should include `pnpm design:generate`.
 
 ## 4. Mock MARD Palette First
@@ -110,3 +111,18 @@ This document records durable product, architecture, runtime, and design decisio
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, zooms the pattern when the pointer is over the grid.
 - Internal grid scrolling is acceptable after the user zooms beyond the fitted size.
 - Very small screens may require zooming before individual bead codes are readable.
+
+## 10. Static Client-Side Themes and i18n
+
+**Decision**: Fundbeads supports source-defined UI languages and themes entirely in the frontend bundle.
+
+**Rationale**: Theme and language selection improves usability without changing the local-only runtime model. Static dictionaries and theme ids avoid remote translation/theme services and keep static deployment simple.
+
+**Implications**:
+
+- Supported locales are `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
+- Supported theme ids are `classic`, `midnight`, `ocean`, `candy`, and `mono`.
+- Language and theme preferences are stored only in browser `localStorage` when available.
+- Preference reads and writes must tolerate blocked storage.
+- MARD color codes remain stable and untranslated; localized palette labels are display-only.
+- New locales or themes require dictionary/label coverage tests and documentation updates.

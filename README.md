@@ -43,10 +43,14 @@ The current app includes:
 - Default fit-to-screen pattern viewing with zoom in/out controls.
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, to zoom while the pointer is over the pattern grid.
 - Color usage summary with swatch, MARD code, label, count, grid size, color count, and total bead count.
+- UI language selector for `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
+- Theme selector for Classic, Midnight, Ocean, Candy, and Mono themes.
 
 ## Local-Only Safety Model
 
 Uploaded images are processed in the browser. The project does not include a backend, database, API server, image upload endpoint, telemetry sink, or third-party image-processing service.
+
+Language and theme preferences are stored only in browser `localStorage` when available. The app continues to run if preference storage is blocked.
 
 The Docker image serves static files only.
 
@@ -55,6 +59,9 @@ The Docker image serves static files only.
 - `frontend/`: Vite React application.
 - `frontend/src/pattern.ts`: Image sampling, color matching, pattern contracts, and count summaries.
 - `frontend/src/palette.ts`: Current mock MARD palette subset.
+- `frontend/src/i18n.tsx`: Supported locales, translations, localized palette labels, and i18n provider.
+- `frontend/src/themes.tsx`: Supported theme ids, preference handling, and theme provider.
+- `frontend/src/browser-storage.ts`: Safe optional access to browser preference storage.
 - `scripts/generate-design-theme.mjs`: Generates CSS variables from `DESIGN.md`.
 - `docs/`: Engineering docs, architecture, design rules, runtime notes, and decisions.
 - `agent/instructions/`: Implementation instructions and backlog candidates.

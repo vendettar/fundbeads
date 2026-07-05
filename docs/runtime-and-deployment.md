@@ -6,6 +6,7 @@ Fundbeads is built as static frontend assets. There is no backend service and no
 
 - **Browser app**: React/Vite code runs in the user's browser.
 - **Image processing**: JPG/PNG decoding, canvas sampling, palette matching, and counting happen locally in the browser.
+- **Preferences**: Language and theme preferences use browser `localStorage` only when available.
 - **Static assets**: Production builds produce `frontend/dist`.
 - **Docker runtime**: nginx serves the compiled static files.
 - **Mutable server state**: None.
@@ -83,6 +84,9 @@ http://localhost:3000
 - There is no image upload endpoint.
 - There is no database or server-side persistence.
 - Uploaded images, generated patterns, and bead counts remain in browser memory unless a future client-side export feature is added.
+- Language and theme preference keys are optional browser-local state only.
+- Translations, theme ids, and display labels are bundled static source data.
+- There is no remote translation, remote theme, telemetry, CDN, or analytics dependency.
 
 ## Verification
 

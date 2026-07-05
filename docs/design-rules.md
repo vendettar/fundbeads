@@ -4,7 +4,7 @@ This document guides Fundbeads frontend work. The app is a craft production tool
 
 ## Token Source
 
-`DESIGN.md` is the source for default theme tokens.
+`DESIGN.md` is the source for default Classic theme tokens.
 
 When changing theme tokens:
 
@@ -14,10 +14,13 @@ When changing theme tokens:
 
 Do not edit `frontend/src/design-theme.generated.css` directly.
 
+Named runtime themes live in normal application CSS as overrides for the same `--beads-*` variables. They must not require remote CSS, remote assets, or changes to the generated file.
+
 ## Product Layout
 
 - The first screen should be the usable tool.
 - Upload, resolution selection, processing status, and errors stay near the top.
+- Language and theme selectors stay near the upload and resolution controls.
 - The pattern grid is the main workspace.
 - The color summary follows the generated grid.
 - Avoid decorative layout that reduces the usable grid area.
@@ -49,12 +52,24 @@ Do not edit `frontend/src/design-theme.generated.css` directly.
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, should zoom only while the pointer is over the pattern grid.
 - Processing and error states must be visible without shifting the whole page.
 - Unsupported file errors should be direct and recoverable.
+- Language and theme controls should use source-defined allowlists.
+- Unsupported stored preferences should fall back without throwing.
+
+## Internationalization
+
+- All user-facing UI copy should go through the i18n dictionary.
+- Supported locales are `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
+- Keep interpolation placeholders aligned across locales.
+- Do not localize MARD codes; color codes remain the stable craft identity.
+- Palette labels may be localized as display-only text keyed by MARD code.
+- Do not load translations from remote services.
 
 ## Tailwind Usage
 
 - Use semantic Tailwind tokens from `frontend/src/styles.css`, such as `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, and `bg-primary`.
 - Use `font-mono` for bead codes, coordinates, and counts.
 - Keep arbitrary one-off colors out of JSX unless the color is actual bead data from the palette.
+- Runtime theme overrides must preserve contrast for form controls, axes, summary text, and error states.
 
 ## Accessibility
 
