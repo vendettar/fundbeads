@@ -40,6 +40,8 @@ The current app includes:
 - RGB Euclidean nearest-color matching.
 - A high-contrast grid with top, bottom, left, and right axes.
 - Stronger helper lines every 5 and 10 cells.
+- Default fit-to-screen pattern viewing with zoom in/out controls.
+- Ctrl + mouse wheel, or Command + mouse wheel on macOS, to zoom while the pointer is over the pattern grid.
 - Color usage summary with swatch, MARD code, label, count, grid size, color count, and total bead count.
 
 ## Local-Only Safety Model

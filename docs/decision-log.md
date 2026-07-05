@@ -96,3 +96,17 @@ This document records durable product, architecture, runtime, and design decisio
 - The runtime image has no app server.
 - `docker-compose.yml` maps host port `3000` to nginx port `80`.
 - Server-side image handling is out of scope.
+
+## 9. Fit-to-Screen Pattern Viewing with Manual Zoom
+
+**Decision**: The pattern grid defaults to a fit-to-screen view and provides manual zoom controls.
+
+**Rationale**: A default scroll-heavy grid is awkward for dense bead charts. Users need to see the full pattern first, then zoom in when they want to inspect or place individual beads.
+
+**Implications**:
+
+- The default generated grid should fit inside the pattern viewport without grid scrollbars.
+- Zoom in/out buttons are part of the grid interaction contract.
+- Ctrl + mouse wheel, or Command + mouse wheel on macOS, zooms the pattern when the pointer is over the grid.
+- Internal grid scrolling is acceptable after the user zooms beyond the fitted size.
+- Very small screens may require zooming before individual bead codes are readable.

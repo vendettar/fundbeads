@@ -1,13 +1,23 @@
-import { ImageUp, Loader2, Palette, TableCellsSplit } from "lucide-react";
+import { ImageUp, Loader2, Palette, TableCellsSplit, ZoomIn, ZoomOut } from "lucide-react";
 import type { ChangeEvent } from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { gridSizes, imageFileToPattern, readableTextColor, type GridSize, type Pattern } from "./pattern";
 
 const acceptedTypes = ["image/jpeg", "image/png"];
+const baseCellSize = 22;
+const baseAxisWidth = 38;
+const gridViewportPadding = 24;
+const minZoom = 0.5;
+const maxZoom = 3;
+const zoomStep = 0.1;
 
 function axisLabels(size: GridSize) {
   return Array.from({ length: size }, (_, index) => index + 1);
+}
+
+function clampZoom(zoom: number) {
+  return Math.min(maxZoom, Math.max(minZoom, Number(zoom.toFixed(2))));
 }
 
 export function App() {
@@ -112,7 +122,7 @@ export function App() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <section className="px-3 py-4 sm:px-4 lg:px-6">
         {pattern ? <PatternGrid pattern={pattern} labels={labels} /> : <EmptyState />}
         {pattern ? <ColorSummary pattern={pattern} /> : null}
       </section>
@@ -135,30 +145,131 @@ function EmptyState() {
 }
 
 function PatternGrid({ pattern, labels }: { pattern: Pattern; labels: number[] }) {
-  const columns = `38px repeat(${pattern.size}, minmax(22px, 1fr)) 38px`;
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [zoom, setZoom] = useState(1);
+
+  const columns = `${baseAxisWidth}px repeat(${pattern.size}, ${baseCellSize}px) ${baseAxisWidth}px`;
+  const baseWidth = baseAxisWidth * 2 + pattern.size * baseCellSize;
+  const baseHeight = (pattern.size + 2) * baseCellSize;
+  const availableWidth = Math.max(1, viewportSize.width - gridViewportPadding);
+  const availableHeight = Math.max(1, viewportSize.height - gridViewportPadding);
+  const fitScale = Math.min(availableWidth / baseWidth, availableHeight / baseHeight, 1);
+  const effectiveScale = fitScale * zoom;
+  const scaledWidth = baseWidth * effectiveScale;
+  const scaledHeight = baseHeight * effectiveScale;
+  const zoomLabel = `${Math.round(zoom * 100)}%`;
+
+  const changeZoom = useCallback((direction: "in" | "out") => {
+    setZoom((currentZoom) => clampZoom(currentZoom + (direction === "in" ? zoomStep : -zoomStep)));
+  }, []);
+
+  useEffect(() => {
+    setZoom(1);
+  }, [pattern.size]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return undefined;
+    }
+
+    function updateViewportSize() {
+      if (!viewport) {
+        return;
+      }
+      setViewportSize({ width: viewport.clientWidth, height: viewport.clientHeight });
+    }
+
+    updateViewportSize();
+    const observer = new ResizeObserver(updateViewportSize);
+    observer.observe(viewport);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return undefined;
+    }
+
+    function onWheel(event: WheelEvent) {
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+
+      event.preventDefault();
+      setZoom((currentZoom) => clampZoom(currentZoom + (event.deltaY < 0 ? zoomStep : -zoomStep)));
+    }
+
+    viewport.addEventListener("wheel", onWheel, { passive: false });
+
+    return () => viewport.removeEventListener("wheel", onWheel);
+  }, []);
 
   return (
-    <div className="overflow-auto border border-border bg-card shadow-panel">
-      <div className="min-w-max p-3">
-        <div className="grid" style={{ gridTemplateColumns: columns }}>
-          <AxisCorner />
-          {labels.map((label) => (
-            <AxisCell key={`top-${label}`} label={label} major={label % 10 === 0 || label % 5 === 0} />
-          ))}
-          <AxisCorner />
-
-          {labels.map((row) => (
-            <Row key={row} row={row} pattern={pattern} />
-          ))}
-
-          <AxisCorner />
-          {labels.map((label) => (
-            <AxisCell key={`bottom-${label}`} label={label} major={label % 10 === 0 || label % 5 === 0} />
-          ))}
-          <AxisCorner />
+    <section className="border border-border bg-card shadow-panel">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-2">
+        <div className="font-mono text-sm font-bold text-muted-foreground">
+          {pattern.size}x{pattern.size} / {zoomLabel}
+        </div>
+        <div className="inline-flex items-center rounded-md border border-border bg-background p-1">
+          <button
+            type="button"
+            onClick={() => changeZoom("out")}
+            disabled={zoom <= minZoom}
+            className="grid size-8 place-items-center rounded text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Zoom out"
+            title="Zoom out"
+          >
+            <ZoomOut size={16} />
+          </button>
+          <span className="min-w-14 px-2 text-center font-mono text-xs font-bold text-muted-foreground">{zoomLabel}</span>
+          <button
+            type="button"
+            onClick={() => changeZoom("in")}
+            disabled={zoom >= maxZoom}
+            className="grid size-8 place-items-center rounded text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Zoom in"
+            title="Zoom in"
+          >
+            <ZoomIn size={16} />
+          </button>
         </div>
       </div>
-    </div>
+      <div ref={viewportRef} className="h-[70vh] min-h-[320px] overflow-auto bg-card lg:h-[calc(100vh-240px)]">
+        <div className="flex min-h-full min-w-full p-3">
+          <div className="m-auto shrink-0" style={{ width: scaledWidth, height: scaledHeight }}>
+            <div
+              className="grid origin-top-left"
+              style={{
+                gridTemplateColumns: columns,
+                width: baseWidth,
+                height: baseHeight,
+                transform: `scale(${effectiveScale})`,
+              }}
+            >
+              <AxisCorner />
+              {labels.map((label) => (
+                <AxisCell key={`top-${label}`} label={label} major={label % 10 === 0 || label % 5 === 0} />
+              ))}
+              <AxisCorner />
+
+              {labels.map((row) => (
+                <Row key={row} row={row} pattern={pattern} />
+              ))}
+
+              <AxisCorner />
+              {labels.map((label) => (
+                <AxisCell key={`bottom-${label}`} label={label} major={label % 10 === 0 || label % 5 === 0} />
+              ))}
+              <AxisCorner />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -179,7 +290,7 @@ function Row({ row, pattern }: { row: number; pattern: Pattern }) {
           <div
             key={`${cell.x}-${cell.y}`}
             className={[
-              "grid aspect-square min-h-[22px] min-w-[22px] place-items-center border-b border-r border-black/40 font-mono text-[9px] font-bold leading-none",
+              "grid h-[22px] w-[22px] place-items-center border-b border-r border-black/40 font-mono text-[9px] font-bold leading-none",
               majorX ? "border-r-[3px] border-r-black" : "",
               minorX && !majorX ? "border-r-2 border-r-black/70 border-r-dashed" : "",
               majorY ? "border-b-[3px] border-b-black" : "",
@@ -203,7 +314,7 @@ function Row({ row, pattern }: { row: number; pattern: Pattern }) {
 function AxisCell({ label, major }: { label: number; major: boolean }) {
   return (
     <div
-      className={`grid h-[22px] min-w-[22px] place-items-center border-b border-r border-border bg-muted px-1 font-mono text-[10px] font-bold ${
+      className={`grid h-[22px] w-full place-items-center border-b border-r border-border bg-muted px-1 font-mono text-[10px] font-bold ${
         major ? "text-primary" : "text-muted-foreground"
       }`}
     >
@@ -213,7 +324,7 @@ function AxisCell({ label, major }: { label: number; major: boolean }) {
 }
 
 function AxisCorner() {
-  return <div className="h-[22px] border-b border-r border-border bg-foreground" />;
+  return <div className="h-[22px] w-full border-b border-r border-border bg-foreground" />;
 }
 
 function ColorSummary({ pattern }: { pattern: Pattern }) {

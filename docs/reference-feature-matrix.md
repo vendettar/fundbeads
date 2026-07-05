@@ -12,9 +12,10 @@ This document records current Fundbeads capability and backlog implications. It 
 | Image pixelation | Canvas draws source image into selected square size. | `imageFileToPattern` | Crop/fit controls are not implemented. |
 | Palette | Mock MARD subset with 28 colors. | `frontend/src/palette.ts` | Full 221-color palette is backlog. |
 | Color matching | Squared RGB Euclidean nearest color. | `nearestBeadColor` | Alternative color spaces need a decision. |
-| Pattern grid | DOM grid with colored cells and MARD codes. | `frontend/src/App.tsx` | Watch 78x78 DOM render cost. |
+| Pattern grid | DOM grid with colored cells and MARD codes. Defaults to fit-to-screen. | `frontend/src/App.tsx` | Watch 78x78 DOM render cost and small-screen readability. |
 | Axes | Top, bottom, left, and right axes from `1` to grid size. | `PatternGrid` and `AxisCell` | Must stay visible in future exports. |
 | Counting lines | Stronger 5/10 helper lines in grid cells and axes. | `Row` styling | Visual verification required for grid changes. |
+| Pattern zoom | Zoom in/out buttons plus Ctrl/Command + wheel while over the grid. | `PatternGrid` | Touch zoom is a backlog improvement. |
 | Color usage summary | Swatch, MARD code, label, count, and total summary. | `summarizeCells`, `ColorSummary` | Counts must derive from cells. |
 | Printable export | Not implemented. | Future instruction | See `agent/instructions/future/002-printable-pattern-export.md`. |
 | Full MARD 221 colors | Not implemented. | Future instruction | See `agent/instructions/future/001-full-mard-221-palette.md`. |
@@ -22,8 +23,9 @@ This document records current Fundbeads capability and backlog implications. It 
 
 ## Current MVP Risks
 
-- `78x78` produces 6,084 bead cells plus axes. DOM rendering is bounded but should be checked when grid UI changes.
+- `78x78` produces 6,084 bead cells plus axes. DOM rendering is bounded but should be checked when grid UI or zoom behavior changes.
 - Cell code readability depends on background color and text contrast.
+- The default fit-to-screen view may make dense grids too small to read on small displays; zoom controls are the intended detail path.
 - Color matching is deterministic but only as accurate as the mock palette data.
 - Source images are stretched into a square grid. This is acceptable for the MVP but should be revisited before export polish.
 - Local-only processing must remain true as dependencies and export flows are added.

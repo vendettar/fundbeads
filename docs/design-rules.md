@@ -31,7 +31,8 @@ Do not edit `frontend/src/design-theme.generated.css` directly.
 - Top, bottom, left, and right axes must be visible.
 - Axis labels run from `1` through the selected grid size.
 - Every 5th or 10th grid line should be stronger than a normal grid line.
-- Large grids must scroll instead of compressing into unreadable cells.
+- Generated grids should default to a fit-to-screen view so the full chart is visible without grid scrollbars.
+- Users can zoom in for detail. Once zoomed beyond the fit size, internal grid scrolling is acceptable.
 
 ## Readability
 
@@ -44,6 +45,8 @@ Do not edit `frontend/src/design-theme.generated.css` directly.
 
 - Use visible text or icon-plus-text controls for primary actions.
 - Resolution selection should behave like a segmented control.
+- Pattern zoom controls should use icon buttons and expose accessible labels.
+- Ctrl + mouse wheel, or Command + mouse wheel on macOS, should zoom only while the pointer is over the pattern grid.
 - Processing and error states must be visible without shifting the whole page.
 - Unsupported file errors should be direct and recoverable.
 
@@ -59,4 +62,4 @@ Do not edit `frontend/src/design-theme.generated.css` directly.
 - Buttons must have readable text or accessible labels.
 - Focus states must remain visible.
 - Error text must be visible near the control that caused it.
-- Grid scroll containers should not trap keyboard navigation.
+- Grid zoom and scroll containers should not trap keyboard navigation.

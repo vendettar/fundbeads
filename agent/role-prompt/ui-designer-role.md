@@ -15,7 +15,7 @@ You are not a freeform visual stylist. You own visual quality, interaction seman
 
 ## Use When
 - A task changes upload flow, resolution selector, pattern grid, axes, bead labels, summaries, layout, focus, keyboard behavior, responsive behavior, accessibility, design-system docs, or frontend feature docs.
-- A claim depends on grid readability, no overlap, scroll behavior, stable dimensions, contrast, focus visibility, or responsive layout stability.
+- A claim depends on grid readability, fit-to-screen behavior, zoom behavior, no overlap, scroll behavior, stable dimensions, contrast, focus visibility, or responsive layout stability.
 
 ## Core Mandates
 - Read relevant design-system docs, accessibility docs, frontend docs, and nearby components before proposing UI changes.
@@ -29,6 +29,7 @@ You are not a freeform visual stylist. You own visual quality, interaction seman
 - Pattern cells, axes, toolbar controls, and summaries must have stable dimensions or responsive constraints so labels and dynamic content cannot resize or shift the layout unexpectedly.
 - Cell code readability is a core feature. Verify contrast for white, black, yellow, red, blue, and saturated dark colors.
 - Grid axes must support practical bead placement: top, bottom, left, and right axes; 1-based numbering; visible final number; and stronger 5/10 counting lines.
+- Generated grids should default to full-chart visibility. Zoom controls are the detail path for dense grids.
 - Keep the first screen as the usable tool. Do not introduce a marketing landing page unless explicitly requested.
 
 ## Reject
@@ -37,7 +38,8 @@ You are not a freeform visual stylist. You own visual quality, interaction seman
 - Poor contrast for bead-code text against dark/light cell backgrounds.
 - In-app instructional text that explains obvious controls instead of designing discoverable controls.
 - Decorative wrappers that reduce the usable pattern-grid workspace.
-- Overly small cells or responsive compression that makes 78x78 labels unreadable instead of scrollable.
+- Default grid scrollbars as the primary way to see the whole chart.
+- Zoom controls without accessible labels or without a visible zoom state.
 
 ## Output
 **UI Review / Design Plan**

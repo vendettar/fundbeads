@@ -14,6 +14,9 @@ This file lists the current shipped feature surface. Planned items are not imple
 - MARD code shown inside every bead cell.
 - Top, bottom, left, and right numbered axes.
 - Stronger helper lines every 5 and 10 cells.
+- Default fit-to-screen grid view.
+- Zoom in/out controls for inspecting dense grids.
+- Ctrl + mouse wheel, or Command + mouse wheel on macOS, to zoom while the pointer is over the pattern grid.
 - Color usage summary with swatch, MARD code, label, count, used color count, grid size, and total bead count.
 - Static build and nginx Docker runtime.
 
@@ -23,11 +26,11 @@ This file lists the current shipped feature surface. Planned items are not imple
 - The source image is stretched into a square grid. Crop/fit controls are not implemented.
 - Printable export is not implemented.
 - Palette filtering is not implemented.
-- Mobile grid navigation is basic scrolling.
+- Very small screens may need zooming to read individual bead codes.
 
 ## Planned
 
 - Verified full MARD 221-color palette.
 - Client-side printable pattern export.
 - Optional palette filtering.
-- Better mobile grid navigation.
+- Better mobile grid navigation and touch zoom gestures.
