@@ -118,6 +118,14 @@
   display: none !important;
 }
 
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   min-width: 320px;
   min-height: 100vh;

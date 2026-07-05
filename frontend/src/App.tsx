@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { locales, normalizeLocale, useI18n } from "./i18n";
 import { gridSizes, imageFileToPattern, readableTextColor, type GridSize, type Pattern } from "./pattern";
-import { normalizeTheme, themes, useTheme } from "./themes";
+import { normalizeTheme, themes, useTheme, type ThemeId } from "./themes";
 
 const acceptedTypes = ["image/jpeg", "image/png"];
 const baseCellSize = 22;
@@ -15,6 +15,14 @@ const maxZoom = 3;
 const zoomStep = 0.1;
 
 type ErrorMessageKey = "unsupportedImage" | "processFailed";
+
+const themeShortLabels: Record<ThemeId, string> = {
+  classic: "CL",
+  midnight: "MN",
+  ocean: "OC",
+  candy: "CY",
+  mono: "MO",
+};
 
 function axisLabels(size: GridSize) {
   return Array.from({ length: size }, (_, index) => index + 1);
@@ -92,54 +100,58 @@ export function App() {
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{t("subtitle")}</p>
             </div>
 
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center xl:justify-end">
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground shadow-panel transition hover:opacity-95">
-                  <ImageUp size={18} />
-                  {t("uploadImage")}
-                  <input id="image-upload" className="sr-only" type="file" accept="image/png,image/jpeg" onChange={onFileChange} />
-                </label>
-                <div className="inline-flex h-10 rounded-md border border-border bg-background p-1 shadow-panel">
-                  {gridSizes.map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => void onGridSizeChange(size)}
-                      className={`rounded px-3 text-sm font-bold transition ${
-                        gridSize === size ? "bg-secondary text-secondary-foreground shadow-panel" : "text-muted-foreground hover:bg-muted"
-                      }`}
-                    >
-                      {size}x{size}
-                    </button>
-                  ))}
+            <div className="min-w-0 xl:ml-auto">
+              <div className="no-scrollbar flex max-w-full items-center gap-2 overflow-x-auto pb-1 xl:justify-end">
+                <div className="flex shrink-0 items-center gap-2">
+                  <label className="inline-flex h-10 max-w-48 shrink-0 cursor-pointer items-center gap-2 rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground shadow-panel transition hover:opacity-95">
+                    <ImageUp size={18} />
+                    <span className="truncate">{t("uploadImage")}</span>
+                    <input id="image-upload" className="sr-only" type="file" accept="image/png,image/jpeg" onChange={onFileChange} />
+                  </label>
+                  <div className="inline-flex h-10 rounded-md border border-border bg-background p-1 shadow-panel">
+                    {gridSizes.map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => void onGridSizeChange(size)}
+                        className={`rounded px-3 text-sm font-bold transition ${
+                          gridSize === size ? "bg-secondary text-secondary-foreground shadow-panel" : "text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {size}x{size}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <PreferenceSelect
-                  label={t("language")}
-                  icon={<Languages size={15} />}
-                  value={locale}
-                  onChange={(value) => {
-                    const nextLocale = normalizeLocale(value);
-                    if (nextLocale) {
-                      setLocale(nextLocale);
-                    }
-                  }}
-                  options={locales.map((nextLocale) => ({ value: nextLocale.id, label: nextLocale.label, displayLabel: nextLocale.shortLabel }))}
-                />
-                <PreferenceSelect
-                  label={t("theme")}
-                  icon={<Paintbrush size={15} />}
-                  value={theme}
-                  onChange={(value) => {
-                    const nextTheme = normalizeTheme(value);
-                    if (nextTheme) {
-                      setTheme(nextTheme);
-                    }
-                  }}
-                  options={themes.map((nextTheme) => ({ value: nextTheme.id, label: themeLabel(nextTheme.id) }))}
-                />
+                <span className="h-7 w-px shrink-0 bg-border" />
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <PreferenceSelect
+                    label={t("language")}
+                    icon={<Languages size={15} />}
+                    value={locale}
+                    onChange={(value) => {
+                      const nextLocale = normalizeLocale(value);
+                      if (nextLocale) {
+                        setLocale(nextLocale);
+                      }
+                    }}
+                    options={locales.map((nextLocale) => ({ value: nextLocale.id, label: nextLocale.label, displayLabel: nextLocale.shortLabel }))}
+                  />
+                  <PreferenceSelect
+                    label={t("theme")}
+                    icon={<Paintbrush size={15} />}
+                    value={theme}
+                    onChange={(value) => {
+                      const nextTheme = normalizeTheme(value);
+                      if (nextTheme) {
+                        setTheme(nextTheme);
+                      }
+                    }}
+                    options={themes.map((nextTheme) => ({ value: nextTheme.id, label: themeLabel(nextTheme.id), displayLabel: themeShortLabels[nextTheme.id] }))}
+                  />
+                </div>
               </div>
             </div>
           </div>
