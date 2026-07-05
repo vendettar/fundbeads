@@ -1,5 +1,12 @@
+/// <reference types="vite/client" />
+
 import { describe, expect, it } from "vitest";
 
+import appSource from "../src/App.tsx?raw";
+import browserStorageSource from "../src/browser-storage.ts?raw";
+import i18nSource from "../src/i18n.tsx?raw";
+import mainSource from "../src/main.tsx?raw";
+import themesSource from "../src/themes.tsx?raw";
 import { getLocalStorage } from "../src/browser-storage";
 import {
   defaultLocale,
@@ -39,7 +46,15 @@ function throwingStorage(): Storage {
   };
 }
 
+function placeholderNames(message: string): string[] {
+  return [...message.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
+}
+
 describe("i18n locale resolution", () => {
+  it("keeps the required locale allowlist exact", () => {
+    expect(locales.map((locale) => locale.id)).toEqual(["en", "zh-Hans", "zh-Hant", "ja", "ko", "es"]);
+  });
+
   it.each([
     ["en-US", "en"],
     ["zh-CN", "zh-Hans"],
@@ -77,6 +92,16 @@ describe("i18n dictionary coverage", () => {
     }
   });
 
+  it("keeps interpolation placeholders aligned across locales", () => {
+    for (const [key, englishMessage] of Object.entries(messages.en)) {
+      const englishPlaceholders = placeholderNames(englishMessage);
+
+      for (const locale of locales) {
+        expect(placeholderNames(messages[locale.id][key as keyof typeof messages.en])).toEqual(englishPlaceholders);
+      }
+    }
+  });
+
   it("provides localized palette labels for every non-English locale", () => {
     for (const locale of locales.filter((item) => item.id !== "en")) {
       for (const color of mardPalette) {
@@ -97,6 +122,10 @@ describe("i18n dictionary coverage", () => {
 });
 
 describe("theme contract", () => {
+  it("keeps the required theme allowlist exact", () => {
+    expect(themes.map((theme) => theme.id)).toEqual(["classic", "midnight", "ocean", "candy", "mono"]);
+  });
+
   it("normalizes supported theme ids", () => {
     expect(normalizeTheme("midnight")).toBe("midnight");
     expect(normalizeTheme("unknown")).toBeNull();
@@ -124,5 +153,24 @@ describe("theme contract", () => {
     expect(() => writeStoredLocale(storage, "en")).not.toThrow();
     expect(readStoredTheme(storage)).toBeNull();
     expect(() => writeStoredTheme(storage, "classic")).not.toThrow();
+  });
+});
+
+describe("client-only source guard", () => {
+  it("does not introduce remote network or telemetry APIs", () => {
+    const sourceFiles = [
+      ["App.tsx", appSource],
+      ["browser-storage.ts", browserStorageSource],
+      ["i18n.tsx", i18nSource],
+      ["main.tsx", mainSource],
+      ["themes.tsx", themesSource],
+    ] as const;
+    const forbiddenPatterns = [/\bfetch\s*\(/, /\bXMLHttpRequest\b/, /\bsendBeacon\b/, /https?:\/\//, /\btelemetry\b/i, /\bcdn\b/i];
+
+    for (const [sourceFile, source] of sourceFiles) {
+      for (const pattern of forbiddenPatterns) {
+        expect(source, `${sourceFile} should not match ${pattern}`).not.toMatch(pattern);
+      }
+    }
   });
 });
