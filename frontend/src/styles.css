@@ -1,6 +1,86 @@
 @import "tailwindcss";
 @import "./design-theme.generated.css";
 
+:root[data-theme="midnight"] {
+  --beads-background: #111318;
+  --beads-foreground: #f4efe6;
+  --beads-card: #1b2028;
+  --beads-card-foreground: #f4efe6;
+  --beads-muted: #2b3340;
+  --beads-muted-foreground: #aeb8c6;
+  --beads-border: #435064;
+  --beads-primary: #68d8c6;
+  --beads-primary-foreground: #08130f;
+  --beads-secondary: #f6c85f;
+  --beads-secondary-foreground: #1b1301;
+  --beads-destructive: #f06a75;
+  --beads-destructive-foreground: #170608;
+  --beads-accent: #9c8cff;
+  --beads-accent-foreground: #100a2a;
+  --beads-ring: rgb(104 216 198 / 0.42);
+  --beads-shadow-panel: 0 18px 45px rgb(0 0 0 / 0.35);
+}
+
+:root[data-theme="ocean"] {
+  --beads-background: #eef8f8;
+  --beads-foreground: #172528;
+  --beads-card: #fbffff;
+  --beads-card-foreground: #172528;
+  --beads-muted: #d9ecec;
+  --beads-muted-foreground: #587073;
+  --beads-border: #a9c8c8;
+  --beads-primary: #0b7285;
+  --beads-primary-foreground: #ffffff;
+  --beads-secondary: #8bd3dd;
+  --beads-secondary-foreground: #08282f;
+  --beads-destructive: #bb3e5a;
+  --beads-destructive-foreground: #ffffff;
+  --beads-accent: #2f9e44;
+  --beads-accent-foreground: #ffffff;
+  --beads-ring: rgb(11 114 133 / 0.35);
+  --beads-shadow-panel: 0 18px 45px rgb(16 91 101 / 0.16);
+}
+
+:root[data-theme="candy"] {
+  --beads-background: #fff5f8;
+  --beads-foreground: #2d1b22;
+  --beads-card: #ffffff;
+  --beads-card-foreground: #2d1b22;
+  --beads-muted: #ffe3eb;
+  --beads-muted-foreground: #7b5a64;
+  --beads-border: #efb8c8;
+  --beads-primary: #cf3f74;
+  --beads-primary-foreground: #ffffff;
+  --beads-secondary: #ffd166;
+  --beads-secondary-foreground: #291b00;
+  --beads-destructive: #b42318;
+  --beads-destructive-foreground: #ffffff;
+  --beads-accent: #4dabf7;
+  --beads-accent-foreground: #041728;
+  --beads-ring: rgb(207 63 116 / 0.34);
+  --beads-shadow-panel: 0 18px 45px rgb(143 47 78 / 0.16);
+}
+
+:root[data-theme="mono"] {
+  --beads-background: #f5f5f2;
+  --beads-foreground: #171717;
+  --beads-card: #ffffff;
+  --beads-card-foreground: #171717;
+  --beads-muted: #e5e5e0;
+  --beads-muted-foreground: #5e5e58;
+  --beads-border: #b9b9b0;
+  --beads-primary: #2f3437;
+  --beads-primary-foreground: #ffffff;
+  --beads-secondary: #d9d9d2;
+  --beads-secondary-foreground: #171717;
+  --beads-destructive: #9f2d2d;
+  --beads-destructive-foreground: #ffffff;
+  --beads-accent: #4b5563;
+  --beads-accent-foreground: #ffffff;
+  --beads-ring: rgb(47 52 55 / 0.35);
+  --beads-shadow-panel: 0 18px 45px rgb(23 23 23 / 0.13);
+}
+
 @theme {
   --font-sans: var(--beads-font-sans);
   --font-mono: var(--beads-font-mono);

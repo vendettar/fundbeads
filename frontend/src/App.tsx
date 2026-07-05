@@ -2,7 +2,9 @@ import { ImageUp, Loader2, Palette, TableCellsSplit, ZoomIn, ZoomOut } from "luc
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { locales, normalizeLocale, useI18n } from "./i18n";
 import { gridSizes, imageFileToPattern, readableTextColor, type GridSize, type Pattern } from "./pattern";
+import { normalizeTheme, themes, useTheme } from "./themes";
 
 const acceptedTypes = ["image/jpeg", "image/png"];
 const baseCellSize = 22;
@@ -11,6 +13,8 @@ const gridViewportPadding = 24;
 const minZoom = 0.5;
 const maxZoom = 3;
 const zoomStep = 0.1;
+
+type ErrorMessageKey = "unsupportedImage" | "processFailed";
 
 function axisLabels(size: GridSize) {
   return Array.from({ length: size }, (_, index) => index + 1);
@@ -24,27 +28,38 @@ export function App() {
   const [gridSize, setGridSize] = useState<GridSize>(52);
   const [pattern, setPattern] = useState<Pattern | null>(null);
   const [fileName, setFileName] = useState("");
-  const [error, setError] = useState("");
+  const [errorKey, setErrorKey] = useState<ErrorMessageKey | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const { locale, setLocale, t, formatNumber, themeLabel } = useI18n();
+  const { theme, setTheme } = useTheme();
 
   const labels = useMemo(() => axisLabels(pattern?.size ?? gridSize), [gridSize, pattern?.size]);
 
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    document.documentElement.dir = "ltr";
+  }, [locale]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
   async function processFile(file: File, size: GridSize) {
     if (!acceptedTypes.includes(file.type)) {
-      setError("Upload a JPG or PNG image.");
+      setErrorKey("unsupportedImage");
       setPattern(null);
       return;
     }
 
     setIsProcessing(true);
-    setError("");
+    setErrorKey(null);
     setFileName(file.name);
 
     try {
       setPattern(await imageFileToPattern(file, size));
-    } catch (nextError) {
+    } catch {
       setPattern(null);
-      setError(nextError instanceof Error ? nextError.message : "Could not process this image.");
+      setErrorKey("processFailed");
     } finally {
       setIsProcessing(false);
     }
@@ -72,16 +87,14 @@ export function App() {
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Fundbeads</p>
-              <h1 className="mt-1 text-3xl font-semibold">Image to Perler Bead Pattern</h1>
-              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                Convert a local JPG or PNG into a labeled MARD bead grid. Processing stays in your browser.
-              </p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">{t("appName")}</p>
+              <h1 className="mt-1 text-3xl font-semibold">{t("title")}</h1>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("subtitle")}</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-panel">
                 <ImageUp size={18} />
-                Upload image
+                {t("uploadImage")}
                 <input id="image-upload" className="sr-only" type="file" accept="image/png,image/jpeg" onChange={onFileChange} />
               </label>
               <div className="inline-flex rounded-md border border-border bg-background p-1">
@@ -98,6 +111,44 @@ export function App() {
                   </button>
                 ))}
               </div>
+              <label className="grid gap-1 text-xs font-semibold text-muted-foreground">
+                {t("language")}
+                <select
+                  value={locale}
+                  onChange={(event) => {
+                    const nextLocale = normalizeLocale(event.target.value);
+                    if (nextLocale) {
+                      setLocale(nextLocale);
+                    }
+                  }}
+                  className="rounded-md border border-border bg-background px-2 py-1.5 text-sm font-semibold text-foreground"
+                >
+                  {locales.map((nextLocale) => (
+                    <option key={nextLocale.id} value={nextLocale.id}>
+                      {nextLocale.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1 text-xs font-semibold text-muted-foreground">
+                {t("theme")}
+                <select
+                  value={theme}
+                  onChange={(event) => {
+                    const nextTheme = normalizeTheme(event.target.value);
+                    if (nextTheme) {
+                      setTheme(nextTheme);
+                    }
+                  }}
+                  className="rounded-md border border-border bg-background px-2 py-1.5 text-sm font-semibold text-foreground"
+                >
+                  {themes.map((nextTheme) => (
+                    <option key={nextTheme.id} value={nextTheme.id}>
+                      {themeLabel(nextTheme.id)}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
           </div>
 
@@ -108,17 +159,19 @@ export function App() {
             </span>
             <span className="inline-flex items-center gap-2">
               <Palette size={16} />
-              {pattern ? `${pattern.usage.length} Colors / Total ${pattern.totalBeads} Beads` : "Waiting for image"}
+              {pattern
+                ? t("headerStats", { colors: formatNumber(pattern.usage.length), total: formatNumber(pattern.totalBeads) })
+                : t("waitingForImage")}
             </span>
             {fileName ? <span className="truncate">{fileName}</span> : null}
             {isProcessing ? (
               <span className="inline-flex items-center gap-2 text-primary">
                 <Loader2 className="animate-spin" size={16} />
-                Processing
+                {t("processing")}
               </span>
             ) : null}
           </div>
-          {error ? <p className="rounded-md border border-destructive bg-card px-3 py-2 text-sm text-destructive">{error}</p> : null}
+          {errorKey ? <p className="rounded-md border border-destructive bg-card px-3 py-2 text-sm text-destructive">{t(errorKey)}</p> : null}
         </div>
       </section>
 
@@ -131,20 +184,21 @@ export function App() {
 }
 
 function EmptyState() {
+  const { t } = useI18n();
+
   return (
     <div className="grid min-h-[420px] place-items-center border border-dashed border-border bg-card px-6 text-center shadow-panel">
       <div>
         <ImageUp className="mx-auto text-primary" size={42} />
-        <h2 className="mt-4 text-xl font-semibold">Upload an image to generate a bead chart</h2>
-        <p className="mt-2 max-w-md text-sm text-muted-foreground">
-          The generated grid will include top, bottom, left, and right axes, per-cell MARD codes, and color counts.
-        </p>
+        <h2 className="mt-4 text-xl font-semibold">{t("emptyTitle")}</h2>
+        <p className="mt-2 max-w-md text-sm text-muted-foreground">{t("emptyBody")}</p>
       </div>
     </div>
   );
 }
 
 function PatternGrid({ pattern, labels }: { pattern: Pattern; labels: number[] }) {
+  const { t } = useI18n();
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [zoom, setZoom] = useState(1);
@@ -211,17 +265,15 @@ function PatternGrid({ pattern, labels }: { pattern: Pattern; labels: number[] }
   return (
     <section className="border border-border bg-card shadow-panel">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-2">
-        <div className="font-mono text-sm font-bold text-muted-foreground">
-          {pattern.size}x{pattern.size} / {zoomLabel}
-        </div>
+        <div className="font-mono text-sm font-bold text-muted-foreground">{t("gridZoomStatus", { size: pattern.size, zoom: zoomLabel })}</div>
         <div className="inline-flex items-center rounded-md border border-border bg-background p-1">
           <button
             type="button"
             onClick={() => changeZoom("out")}
             disabled={zoom <= minZoom}
             className="grid size-8 place-items-center rounded text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Zoom out"
-            title="Zoom out"
+            aria-label={t("zoomOut")}
+            title={t("zoomOut")}
           >
             <ZoomOut size={16} />
           </button>
@@ -231,8 +283,8 @@ function PatternGrid({ pattern, labels }: { pattern: Pattern; labels: number[] }
             onClick={() => changeZoom("in")}
             disabled={zoom >= maxZoom}
             className="grid size-8 place-items-center rounded text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Zoom in"
-            title="Zoom in"
+            aria-label={t("zoomIn")}
+            title={t("zoomIn")}
           >
             <ZoomIn size={16} />
           </button>
@@ -274,6 +326,7 @@ function PatternGrid({ pattern, labels }: { pattern: Pattern; labels: number[] }
 }
 
 function Row({ row, pattern }: { row: number; pattern: Pattern }) {
+  const { paletteLabel, t } = useI18n();
   const start = (row - 1) * pattern.size;
   const rowCells = pattern.cells.slice(start, start + pattern.size);
 
@@ -300,7 +353,7 @@ function Row({ row, pattern }: { row: number; pattern: Pattern }) {
               backgroundColor: `rgb(${cell.color.r} ${cell.color.g} ${cell.color.b})`,
               color: readableTextColor(cell.color),
             }}
-            title={`${cell.x},${cell.y}: ${cell.color.code} ${cell.color.label}`}
+            title={t("cellTitle", { x: cell.x, y: cell.y, code: cell.color.code, label: paletteLabel(cell.color) })}
           >
             {cell.color.code}
           </div>
@@ -328,12 +381,14 @@ function AxisCorner() {
 }
 
 function ColorSummary({ pattern }: { pattern: Pattern }) {
+  const { formatNumber, paletteLabel, t } = useI18n();
+
   return (
     <section className="mt-6 border border-border bg-card p-4 shadow-panel">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold">Summary</h2>
+        <h2 className="text-lg font-semibold">{t("summaryTitle")}</h2>
         <p className="text-sm text-muted-foreground">
-          Pattern [{pattern.size}x{pattern.size} / {pattern.usage.length} Colors / Total {pattern.totalBeads} Beads]
+          {t("patternSummary", { size: pattern.size, colors: formatNumber(pattern.usage.length), total: formatNumber(pattern.totalBeads) })}
         </p>
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -345,9 +400,9 @@ function ColorSummary({ pattern }: { pattern: Pattern }) {
             />
             <div className="min-w-0 flex-1">
               <p className="font-mono text-sm font-bold">{color.code}</p>
-              <p className="truncate text-xs text-muted-foreground">{color.label}</p>
+              <p className="truncate text-xs text-muted-foreground">{paletteLabel(color)}</p>
             </div>
-            <p className="font-mono text-sm font-bold">{count}</p>
+            <p className="font-mono text-sm font-bold">{formatNumber(count)}</p>
           </div>
         ))}
       </div>
