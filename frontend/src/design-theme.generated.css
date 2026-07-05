@@ -1,0 +1,25 @@
+/* Generated from DESIGN.md by scripts/generate-design-theme.mjs. */
+/* Do not edit directly; run `pnpm design:generate`. */
+
+:root {
+  --beads-background: #f7f4ec;
+  --beads-foreground: #211f1a;
+  --beads-card: #fffdf7;
+  --beads-card-foreground: #211f1a;
+  --beads-muted: #ebe4d3;
+  --beads-muted-foreground: #6c6658;
+  --beads-border: #cfc5ac;
+  --beads-primary: #167c7a;
+  --beads-primary-foreground: #ffffff;
+  --beads-secondary: #f0b429;
+  --beads-secondary-foreground: #221a02;
+  --beads-destructive: #b23a48;
+  --beads-destructive-foreground: #ffffff;
+  --beads-accent: #d95f3d;
+  --beads-accent-foreground: #ffffff;
+  --beads-ring: #167c7a59;
+  --beads-font-sans: "Avenir Next", "Trebuchet MS", sans-serif;
+  --beads-font-mono: "SFMono-Regular", "Menlo", monospace;
+  --beads-shadow-panel: 0 18px 45px rgb(67 55 26 / 0.14);
+}
+

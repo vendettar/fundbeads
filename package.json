@@ -1,0 +1,20 @@
+{
+  "name": "fundbeads",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "check": "pnpm build:frontend && pnpm test:frontend",
+    "test:frontend": "pnpm --dir frontend test:run",
+    "design:generate": "node scripts/generate-design-theme.mjs",
+    "design:lint": "designmd lint DESIGN.md",
+    "design:export": "pnpm design:generate",
+    "dev": "pnpm dev:frontend",
+    "dev:frontend": "pnpm --dir frontend dev",
+    "build:frontend": "pnpm --dir frontend build",
+    "preview:frontend": "pnpm --dir frontend preview"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "devDependencies": {
+    "@google/design.md": "^0.3.0"
+  }
+}

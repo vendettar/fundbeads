@@ -1,0 +1,10 @@
+services:
+  fundbeads:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fundbeads:local
+    container_name: fundbeads
+    restart: unless-stopped
+    ports:
+      - "3000:80"

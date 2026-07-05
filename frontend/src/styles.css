@@ -1,0 +1,52 @@
+@import "tailwindcss";
+@import "./design-theme.generated.css";
+
+@theme {
+  --font-sans: var(--beads-font-sans);
+  --font-mono: var(--beads-font-mono);
+
+  --color-background: var(--beads-background);
+  --color-foreground: var(--beads-foreground);
+  --color-card: var(--beads-card);
+  --color-card-foreground: var(--beads-card-foreground);
+  --color-muted: var(--beads-muted);
+  --color-muted-foreground: var(--beads-muted-foreground);
+  --color-border: var(--beads-border);
+  --color-primary: var(--beads-primary);
+  --color-primary-foreground: var(--beads-primary-foreground);
+  --color-secondary: var(--beads-secondary);
+  --color-secondary-foreground: var(--beads-secondary-foreground);
+  --color-destructive: var(--beads-destructive);
+  --color-destructive-foreground: var(--beads-destructive-foreground);
+  --color-accent: var(--beads-accent);
+  --color-accent-foreground: var(--beads-accent-foreground);
+  --color-ring: var(--beads-ring);
+
+  --shadow-panel: var(--beads-shadow-panel);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+select,
+input,
+textarea {
+  font: inherit;
+}
