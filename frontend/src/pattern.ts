@@ -30,6 +30,14 @@ export function colorDistance(a: Rgb, b: Rgb): number {
   return red * red + green * green + blue * blue;
 }
 
+export function compositeRgbOverWhite(color: Rgb, alpha: number): Rgb {
+  return {
+    r: Math.round(color.r * alpha + 255 * (1 - alpha)),
+    g: Math.round(color.g * alpha + 255 * (1 - alpha)),
+    b: Math.round(color.b * alpha + 255 * (1 - alpha)),
+  };
+}
+
 export function nearestBeadColor(color: Rgb, palette: BeadColor[] = mardPalette): BeadColor {
   if (palette.length === 0) {
     throw new Error("Palette must include at least one color.");
@@ -93,11 +101,7 @@ export async function imageFileToPattern(file: File, size: GridSize): Promise<Pa
       for (let x = 0; x < size; x += 1) {
         const offset = (y * size + x) * 4;
         const alpha = pixels[offset + 3] / 255;
-        const sampled = {
-          r: Math.round(pixels[offset] * alpha + 255 * (1 - alpha)),
-          g: Math.round(pixels[offset + 1] * alpha + 255 * (1 - alpha)),
-          b: Math.round(pixels[offset + 2] * alpha + 255 * (1 - alpha)),
-        };
+        const sampled = compositeRgbOverWhite({ r: pixels[offset], g: pixels[offset + 1], b: pixels[offset + 2] }, alpha);
 
         cells.push({
           x: x + 1,
