@@ -1,7 +1,12 @@
 @import "tailwindcss";
 @import "./design-theme.generated.css";
 
+:root {
+  color-scheme: light;
+}
+
 :root[data-theme="midnight"] {
+  color-scheme: dark;
   --beads-background: #111318;
   --beads-foreground: #f4efe6;
   --beads-card: #1b2028;
@@ -129,4 +134,9 @@ select,
 input,
 textarea {
   font: inherit;
+}
+
+select option {
+  background: var(--beads-card);
+  color: var(--beads-foreground);
 }

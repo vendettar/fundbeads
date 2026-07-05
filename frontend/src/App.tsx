@@ -1,5 +1,5 @@
-import { ImageUp, Loader2, Palette, TableCellsSplit, ZoomIn, ZoomOut } from "lucide-react";
-import type { ChangeEvent } from "react";
+import { ChevronDown, ImageUp, Languages, Loader2, Paintbrush, Palette, TableCellsSplit, ZoomIn, ZoomOut } from "lucide-react";
+import type { ChangeEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { locales, normalizeLocale, useI18n } from "./i18n";
@@ -83,95 +83,100 @@ export function App() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <section className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">{t("appName")}</p>
-              <h1 className="mt-1 text-3xl font-semibold">{t("title")}</h1>
-              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("subtitle")}</p>
+      <section className="border-b border-border bg-card shadow-panel">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase text-primary">{t("appName")}</p>
+              <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">{t("title")}</h1>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{t("subtitle")}</p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-panel">
-                <ImageUp size={18} />
-                {t("uploadImage")}
-                <input id="image-upload" className="sr-only" type="file" accept="image/png,image/jpeg" onChange={onFileChange} />
-              </label>
-              <div className="inline-flex rounded-md border border-border bg-background p-1">
-                {gridSizes.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => void onGridSizeChange(size)}
-                    className={`rounded px-3 py-1.5 text-sm font-semibold ${
-                      gridSize === size ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {size}x{size}
-                  </button>
-                ))}
+
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center xl:justify-end">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground shadow-panel transition hover:opacity-95">
+                  <ImageUp size={18} />
+                  {t("uploadImage")}
+                  <input id="image-upload" className="sr-only" type="file" accept="image/png,image/jpeg" onChange={onFileChange} />
+                </label>
+                <div className="inline-flex h-10 rounded-md border border-border bg-background p-1 shadow-panel">
+                  {gridSizes.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => void onGridSizeChange(size)}
+                      className={`rounded px-3 text-sm font-bold transition ${
+                        gridSize === size ? "bg-secondary text-secondary-foreground shadow-panel" : "text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {size}x{size}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <label className="grid gap-1 text-xs font-semibold text-muted-foreground">
-                {t("language")}
-                <select
+
+              <div className="flex flex-wrap items-center gap-2">
+                <PreferenceSelect
+                  label={t("language")}
+                  icon={<Languages size={15} />}
                   value={locale}
-                  onChange={(event) => {
-                    const nextLocale = normalizeLocale(event.target.value);
+                  onChange={(value) => {
+                    const nextLocale = normalizeLocale(value);
                     if (nextLocale) {
                       setLocale(nextLocale);
                     }
                   }}
-                  className="rounded-md border border-border bg-background px-2 py-1.5 text-sm font-semibold text-foreground"
-                >
-                  {locales.map((nextLocale) => (
-                    <option key={nextLocale.id} value={nextLocale.id}>
-                      {nextLocale.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-1 text-xs font-semibold text-muted-foreground">
-                {t("theme")}
-                <select
+                  options={locales.map((nextLocale) => ({ value: nextLocale.id, label: nextLocale.label, displayLabel: nextLocale.shortLabel }))}
+                />
+                <PreferenceSelect
+                  label={t("theme")}
+                  icon={<Paintbrush size={15} />}
                   value={theme}
-                  onChange={(event) => {
-                    const nextTheme = normalizeTheme(event.target.value);
+                  onChange={(value) => {
+                    const nextTheme = normalizeTheme(value);
                     if (nextTheme) {
                       setTheme(nextTheme);
                     }
                   }}
-                  className="rounded-md border border-border bg-background px-2 py-1.5 text-sm font-semibold text-foreground"
-                >
-                  {themes.map((nextTheme) => (
-                    <option key={nextTheme.id} value={nextTheme.id}>
-                      {themeLabel(nextTheme.id)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  options={themes.map((nextTheme) => ({ value: nextTheme.id, label: themeLabel(nextTheme.id) }))}
+                />
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-3 text-xs font-semibold text-muted-foreground" aria-live="polite">
+            <span className="inline-flex min-w-0 items-center gap-2">
               <TableCellsSplit size={16} />
               {pattern ? `${pattern.size}x${pattern.size}` : `${gridSize}x${gridSize}`}
             </span>
-            <span className="inline-flex items-center gap-2">
+            <span className="h-1 w-1 rounded-full bg-border" />
+            <span className="inline-flex min-w-0 items-center gap-2">
               <Palette size={16} />
               {pattern
                 ? t("headerStats", { colors: formatNumber(pattern.usage.length), total: formatNumber(pattern.totalBeads) })
                 : t("waitingForImage")}
             </span>
-            {fileName ? <span className="truncate">{fileName}</span> : null}
+            {fileName ? (
+              <>
+                <span className="h-1 w-1 rounded-full bg-border" />
+                <span className="max-w-full truncate sm:max-w-xs">{fileName}</span>
+              </>
+            ) : null}
             {isProcessing ? (
-              <span className="inline-flex items-center gap-2 text-primary">
-                <Loader2 className="animate-spin" size={16} />
-                {t("processing")}
-              </span>
+              <>
+                <span className="h-1 w-1 rounded-full bg-border" />
+                <span className="inline-flex items-center gap-2 text-primary">
+                  <Loader2 className="animate-spin" size={16} />
+                  {t("processing")}
+                </span>
+              </>
             ) : null}
           </div>
-          {errorKey ? <p className="rounded-md border border-destructive bg-card px-3 py-2 text-sm text-destructive">{t(errorKey)}</p> : null}
+          {errorKey ? (
+            <p role="alert" className="rounded-md border border-destructive bg-background px-3 py-2 text-sm font-semibold text-destructive">
+              {t(errorKey)}
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -180,6 +185,50 @@ export function App() {
         {pattern ? <ColorSummary pattern={pattern} /> : null}
       </section>
     </main>
+  );
+}
+
+type SelectOption = {
+  value: string;
+  label: string;
+  displayLabel?: string;
+};
+
+function PreferenceSelect({
+  label,
+  icon,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  icon: ReactNode;
+  value: string;
+  options: SelectOption[];
+  onChange: (value: string) => void;
+}) {
+  const selectedOption = options.find((option) => option.value === value);
+  const selectedLabel = selectedOption?.displayLabel ?? selectedOption?.label ?? value;
+
+  return (
+    <label className="relative inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-3 text-sm font-semibold text-foreground transition hover:bg-muted focus-within:ring-2 focus-within:ring-ring">
+      <span className="pointer-events-none text-muted-foreground">{icon}</span>
+      <span className="sr-only">{label}</span>
+      <span className="pointer-events-none min-w-6 max-w-24 truncate">{selectedLabel}</span>
+      <select
+        value={value}
+        aria-label={label}
+        onChange={(event) => onChange(event.target.value)}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none text-muted-foreground" size={15} />
+    </label>
   );
 }
 
