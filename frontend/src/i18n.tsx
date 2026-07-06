@@ -36,10 +36,19 @@ type Messages = {
   colorDistanceModeRgbFast: string;
   colorDistanceModeWeightedRgb: string;
   colorDistanceModeLabDeltaE: string;
+  colorDistanceModeHint: string;
+  colorDistanceModeOklabDescription: string;
+  colorDistanceModeRgbFastDescription: string;
+  colorDistanceModeWeightedRgbDescription: string;
+  colorDistanceModeLabDeltaEDescription: string;
   ditherMode: string;
   ditherModeOff: string;
   ditherModeFloydSteinberg: string;
   ditherModeOrdered: string;
+  ditherModeHint: string;
+  ditherModeOffDescription: string;
+  ditherModeFloydSteinbergDescription: string;
+  ditherModeOrderedDescription: string;
   smoothingLevel: string;
   decreaseSmoothing: string;
   increaseSmoothing: string;
@@ -83,6 +92,10 @@ type Messages = {
   patternEditReplaceTarget: string;
   patternEditApplyReplace: string;
   patternEditReplaceNoSource: string;
+  patternPreviewToolbar: string;
+  patternPreviewShowGrid: string;
+  patternPreviewShowCodes: string;
+  patternPreviewShowAxes: string;
   cellTitle: string;
   dropzoneTitle: string;
   dropzoneBody: string;
@@ -93,6 +106,9 @@ type Messages = {
   mardPaletteSummary: string;
   paletteFamilyTitle: string;
   closeDialog: string;
+  presetSmall: string;
+  presetMedium: string;
+  presetLarge: string;
 };
 
 export const messages: Record<Locale, Messages> = {
@@ -110,10 +126,19 @@ export const messages: Record<Locale, Messages> = {
     colorDistanceModeRgbFast: "Fast RGB",
     colorDistanceModeWeightedRgb: "Weighted RGB",
     colorDistanceModeLabDeltaE: "Lab Delta-E",
+    colorDistanceModeHint: "Chooses how each sampled pixel finds the nearest MARD color.",
+    colorDistanceModeOklabDescription: "Default. Balanced perceptual match for most photos and artwork.",
+    colorDistanceModeRgbFastDescription: "Fast and predictable for icons, pixel art, and comparisons.",
+    colorDistanceModeWeightedRgbDescription: "Weights green more, often better for natural images.",
+    colorDistanceModeLabDeltaEDescription: "Traditional color-difference model for photos and subtle color shifts.",
     ditherMode: "Dither mode",
     ditherModeOff: "Off",
     ditherModeFloydSteinberg: "Floyd-Steinberg",
     ditherModeOrdered: "Ordered",
+    ditherModeHint: "Uses neighboring beads to simulate intermediate tones.",
+    ditherModeOffDescription: "Clean solid areas; best for icons and low-color patterns.",
+    ditherModeFloydSteinbergDescription: "Gradients, photos, and skin tones look more natural, but charts get speckled.",
+    ditherModeOrderedDescription: "Regular patterned texture; smoother gradients with more control than error diffusion.",
     smoothingLevel: "Smoothing",
     decreaseSmoothing: "Decrease smoothing",
     increaseSmoothing: "Increase smoothing",
@@ -157,6 +182,10 @@ export const messages: Record<Locale, Messages> = {
     patternEditReplaceTarget: "Target color",
     patternEditApplyReplace: "Apply",
     patternEditReplaceNoSource: "Choose different source and target colors that exist in the pattern.",
+    patternPreviewToolbar: "Pattern preview controls",
+    patternPreviewShowGrid: "Show grid",
+    patternPreviewShowCodes: "Show color codes",
+    patternPreviewShowAxes: "Show row/column labels",
     cellTitle: "{x},{y}: {code} {label}",
     dropzoneTitle: "Drop an image here",
     dropzoneBody: "Click or drag a local JPG, PNG, or WebP into this workspace to generate a bead pattern. The image stays in your browser.",
@@ -167,6 +196,9 @@ export const messages: Record<Locale, Messages> = {
     mardPaletteSummary: "{colors} colors across {families} families",
     paletteFamilyTitle: "{family} family / {count} colors",
     closeDialog: "Close",
+    presetSmall: "Small",
+    presetMedium: "Medium",
+    presetLarge: "Large",
   },
   "zh-Hans": {
     appName: "Fundbeads",
@@ -181,11 +213,20 @@ export const messages: Record<Locale, Messages> = {
     colorDistanceModeOklab: "感知",
     colorDistanceModeRgbFast: "快速 RGB",
     colorDistanceModeWeightedRgb: "加权 RGB",
-    colorDistanceModeLabDeltaE: "Lab Delta-E",
+    colorDistanceModeLabDeltaE: "Lab 色差",
+    colorDistanceModeHint: "决定每个采样像素如何寻找最近的 MARD 颜色。",
+    colorDistanceModeOklabDescription: "默认推荐。更接近人眼观感，适合大多数照片和插画。",
+    colorDistanceModeRgbFastDescription: "最快且稳定，适合图标、像素图和测试对照。",
+    colorDistanceModeWeightedRgbDescription: "更重视绿色变化，常适合自然图片。",
+    colorDistanceModeLabDeltaEDescription: "传统色差模型，适合照片和细微色差。",
     ditherMode: "抖动模式",
     ditherModeOff: "关闭",
     ditherModeFloydSteinberg: "Floyd-Steinberg",
     ditherModeOrdered: "有序抖动",
+    ditherModeHint: "通过相邻珠子模拟中间色调。",
+    ditherModeOffDescription: "色块最干净，适合图标和低色数图。",
+    ditherModeFloydSteinbergDescription: "渐变、照片、肤色会更自然，但图纸更碎。",
+    ditherModeOrderedDescription: "规律纹理，让渐变更平滑，比误差扩散更可控。",
     smoothingLevel: "平滑",
     decreaseSmoothing: "降低平滑",
     increaseSmoothing: "提高平滑",
@@ -229,6 +270,10 @@ export const messages: Record<Locale, Messages> = {
     patternEditReplaceTarget: "目标颜色",
     patternEditApplyReplace: "应用",
     patternEditReplaceNoSource: "请选择图纸中存在且彼此不同的来源和目标颜色。",
+    patternPreviewToolbar: "图纸预览控制",
+    patternPreviewShowGrid: "显示网格",
+    patternPreviewShowCodes: "显示色号",
+    patternPreviewShowAxes: "显示行列编号",
     cellTitle: "{x},{y}: {code} {label}",
     dropzoneTitle: "把图片拖到这里",
     dropzoneBody: "点击或拖入本地 JPG、PNG 或 WebP 图片以生成拼豆图纸。图片只会在浏览器本地处理。",
@@ -239,6 +284,9 @@ export const messages: Record<Locale, Messages> = {
     mardPaletteSummary: "{families} 个色系，共 {colors} 色",
     paletteFamilyTitle: "{family} 色系 / {count} 色",
     closeDialog: "关闭",
+    presetSmall: "小",
+    presetMedium: "中",
+    presetLarge: "大",
   },
   "zh-Hant": {
     appName: "Fundbeads",
@@ -253,11 +301,20 @@ export const messages: Record<Locale, Messages> = {
     colorDistanceModeOklab: "感知",
     colorDistanceModeRgbFast: "快速 RGB",
     colorDistanceModeWeightedRgb: "加權 RGB",
-    colorDistanceModeLabDeltaE: "Lab Delta-E",
+    colorDistanceModeLabDeltaE: "Lab 色差",
+    colorDistanceModeHint: "決定每個採樣像素如何尋找最近的 MARD 顏色。",
+    colorDistanceModeOklabDescription: "預設推薦。更接近人眼觀感，適合大多數照片和插畫。",
+    colorDistanceModeRgbFastDescription: "最快且穩定，適合圖示、像素圖和測試對照。",
+    colorDistanceModeWeightedRgbDescription: "更重視綠色變化，常適合自然圖片。",
+    colorDistanceModeLabDeltaEDescription: "傳統色差模型，適合照片和細微色差。",
     ditherMode: "抖動模式",
     ditherModeOff: "關閉",
     ditherModeFloydSteinberg: "Floyd-Steinberg",
     ditherModeOrdered: "有序抖動",
+    ditherModeHint: "透過相鄰珠子模擬中間色調。",
+    ditherModeOffDescription: "色塊最乾淨，適合圖示和低色數圖。",
+    ditherModeFloydSteinbergDescription: "漸層、照片、膚色會更自然，但圖紙更碎。",
+    ditherModeOrderedDescription: "規律紋理，讓漸層更平滑，比誤差擴散更可控。",
     smoothingLevel: "平滑",
     decreaseSmoothing: "降低平滑",
     increaseSmoothing: "提高平滑",
@@ -301,6 +358,10 @@ export const messages: Record<Locale, Messages> = {
     patternEditReplaceTarget: "目標顏色",
     patternEditApplyReplace: "套用",
     patternEditReplaceNoSource: "請選擇圖紙中存在且彼此不同的來源和目標顏色。",
+    patternPreviewToolbar: "圖紙預覽控制",
+    patternPreviewShowGrid: "顯示網格",
+    patternPreviewShowCodes: "顯示色號",
+    patternPreviewShowAxes: "顯示行列編號",
     cellTitle: "{x},{y}: {code} {label}",
     dropzoneTitle: "把圖片拖到這裡",
     dropzoneBody: "點擊或拖入本機 JPG、PNG 或 WebP 圖片以產生拼豆圖紙。圖片只會在瀏覽器本機處理。",
@@ -311,6 +372,9 @@ export const messages: Record<Locale, Messages> = {
     mardPaletteSummary: "{families} 個色系，共 {colors} 色",
     paletteFamilyTitle: "{family} 色系 / {count} 色",
     closeDialog: "關閉",
+    presetSmall: "小",
+    presetMedium: "中",
+    presetLarge: "大",
   },
   ja: {
     appName: "Fundbeads",
@@ -326,10 +390,19 @@ export const messages: Record<Locale, Messages> = {
     colorDistanceModeRgbFast: "高速 RGB",
     colorDistanceModeWeightedRgb: "加重 RGB",
     colorDistanceModeLabDeltaE: "Lab Delta-E",
+    colorDistanceModeHint: "各サンプルが最も近い MARD 色を選ぶ方法を決めます。",
+    colorDistanceModeOklabDescription: "既定。多くの写真やイラストで見た目の近さを取りやすい方式です。",
+    colorDistanceModeRgbFastDescription: "高速で予測しやすく、アイコン、ピクセルアート、比較に向きます。",
+    colorDistanceModeWeightedRgbDescription: "緑の差を重く見て、自然画像で合いやすい場合があります。",
+    colorDistanceModeLabDeltaEDescription: "写真や微妙な色差に向く伝統的な色差モデルです。",
     ditherMode: "ディザー方式",
     ditherModeOff: "オフ",
     ditherModeFloydSteinberg: "Floyd-Steinberg",
     ditherModeOrdered: "順序ディザー",
+    ditherModeHint: "近くのビーズで中間色の見え方を再現します。",
+    ditherModeOffDescription: "色面が最もきれいで、アイコンや少ない色数の図案に向きます。",
+    ditherModeFloydSteinbergDescription: "グラデーション、写真、肌色が自然になりますが、図案は細かくなります。",
+    ditherModeOrderedDescription: "規則的な模様で、誤差拡散より制御しやすく滑らかな階調にします。",
     smoothingLevel: "平滑化",
     decreaseSmoothing: "平滑化を下げる",
     increaseSmoothing: "平滑化を上げる",
@@ -373,6 +446,10 @@ export const messages: Record<Locale, Messages> = {
     patternEditReplaceTarget: "置換先の色",
     patternEditApplyReplace: "適用",
     patternEditReplaceNoSource: "図案内にある、異なる元色と置換先を選んでください。",
+    patternPreviewToolbar: "図案プレビュー設定",
+    patternPreviewShowGrid: "グリッドを表示",
+    patternPreviewShowCodes: "色コードを表示",
+    patternPreviewShowAxes: "行列番号を表示",
     cellTitle: "{x},{y}: {code} {label}",
     dropzoneTitle: "ここに画像をドロップ",
     dropzoneBody: "ローカルの JPG、PNG、または WebP をクリックまたはドラッグして、ビーズ図案を生成します。画像はブラウザー内で処理されます。",
@@ -383,6 +460,9 @@ export const messages: Record<Locale, Messages> = {
     mardPaletteSummary: "{families} 系統 / {colors} 色",
     paletteFamilyTitle: "{family} 系統 / {count} 色",
     closeDialog: "閉じる",
+    presetSmall: "小",
+    presetMedium: "中",
+    presetLarge: "大",
   },
   ko: {
     appName: "Fundbeads",
@@ -398,10 +478,19 @@ export const messages: Record<Locale, Messages> = {
     colorDistanceModeRgbFast: "빠른 RGB",
     colorDistanceModeWeightedRgb: "가중 RGB",
     colorDistanceModeLabDeltaE: "Lab Delta-E",
+    colorDistanceModeHint: "각 샘플 픽셀이 가장 가까운 MARD 색을 찾는 방식을 정합니다.",
+    colorDistanceModeOklabDescription: "기본값. 대부분의 사진과 일러스트에서 균형 잡힌 지각 매칭입니다.",
+    colorDistanceModeRgbFastDescription: "빠르고 예측 가능해 아이콘, 픽셀 아트, 비교에 적합합니다.",
+    colorDistanceModeWeightedRgbDescription: "녹색 차이를 더 크게 반영해 자연 이미지에 잘 맞을 때가 있습니다.",
+    colorDistanceModeLabDeltaEDescription: "사진과 미묘한 색 차이에 쓰기 좋은 전통적인 색차 모델입니다.",
     ditherMode: "디더링 방식",
     ditherModeOff: "끄기",
     ditherModeFloydSteinberg: "Floyd-Steinberg",
     ditherModeOrdered: "순서 디더링",
+    ditherModeHint: "주변 비즈를 이용해 중간 톤처럼 보이게 합니다.",
+    ditherModeOffDescription: "색면이 가장 깔끔해 아이콘과 적은 색상의 패턴에 적합합니다.",
+    ditherModeFloydSteinbergDescription: "그라데이션, 사진, 피부 톤이 더 자연스럽지만 도안이 더 잘게 나뉩니다.",
+    ditherModeOrderedDescription: "규칙적인 질감으로, 오차 확산보다 제어하기 쉬운 부드러운 그라데이션을 만듭니다.",
     smoothingLevel: "스무딩",
     decreaseSmoothing: "스무딩 줄이기",
     increaseSmoothing: "스무딩 늘리기",
@@ -445,6 +534,10 @@ export const messages: Record<Locale, Messages> = {
     patternEditReplaceTarget: "대상 색상",
     patternEditApplyReplace: "적용",
     patternEditReplaceNoSource: "패턴에 있는 서로 다른 원본 및 대상 색상을 선택하세요.",
+    patternPreviewToolbar: "패턴 미리보기 제어",
+    patternPreviewShowGrid: "격자 표시",
+    patternPreviewShowCodes: "색상 코드 표시",
+    patternPreviewShowAxes: "행/열 번호 표시",
     cellTitle: "{x},{y}: {code} {label}",
     dropzoneTitle: "이미지를 여기에 놓으세요",
     dropzoneBody: "로컬 JPG, PNG 또는 WebP를 클릭하거나 끌어와 비즈 도안을 생성합니다. 이미지는 브라우저에서만 처리됩니다.",
@@ -455,6 +548,9 @@ export const messages: Record<Locale, Messages> = {
     mardPaletteSummary: "{families}개 계열 / {colors}색",
     paletteFamilyTitle: "{family} 계열 / {count}색",
     closeDialog: "닫기",
+    presetSmall: "소",
+    presetMedium: "중",
+    presetLarge: "대",
   },
   es: {
     appName: "Fundbeads",
@@ -470,10 +566,19 @@ export const messages: Record<Locale, Messages> = {
     colorDistanceModeRgbFast: "RGB rápido",
     colorDistanceModeWeightedRgb: "RGB ponderado",
     colorDistanceModeLabDeltaE: "Lab Delta-E",
+    colorDistanceModeHint: "Define cómo cada muestra encuentra el color MARD más cercano.",
+    colorDistanceModeOklabDescription: "Predeterminado. Ajuste perceptual equilibrado para la mayoría de fotos e ilustraciones.",
+    colorDistanceModeRgbFastDescription: "Rápido y predecible para iconos, pixel art y comparaciones.",
+    colorDistanceModeWeightedRgbDescription: "Da más peso al verde y suele funcionar mejor en imágenes naturales.",
+    colorDistanceModeLabDeltaEDescription: "Modelo tradicional de diferencia de color para fotos y cambios sutiles.",
     ditherMode: "Modo de tramado",
     ditherModeOff: "Desactivado",
     ditherModeFloydSteinberg: "Floyd-Steinberg",
     ditherModeOrdered: "Ordenado",
+    ditherModeHint: "Usa cuentas vecinas para simular tonos intermedios.",
+    ditherModeOffDescription: "Áreas sólidas limpias; mejor para iconos y patrones con pocos colores.",
+    ditherModeFloydSteinbergDescription: "Degradados, fotos y tonos de piel se ven más naturales, pero el patrón queda moteado.",
+    ditherModeOrderedDescription: "Textura regular; suaviza degradados con más control que la difusión de error.",
     smoothingLevel: "Suavizado",
     decreaseSmoothing: "Reducir suavizado",
     increaseSmoothing: "Aumentar suavizado",
@@ -517,6 +622,10 @@ export const messages: Record<Locale, Messages> = {
     patternEditReplaceTarget: "Color destino",
     patternEditApplyReplace: "Aplicar",
     patternEditReplaceNoSource: "Elige colores de origen y destino diferentes que existan en el patrón.",
+    patternPreviewToolbar: "Controles de vista previa",
+    patternPreviewShowGrid: "Mostrar cuadrícula",
+    patternPreviewShowCodes: "Mostrar códigos",
+    patternPreviewShowAxes: "Mostrar filas/columnas",
     cellTitle: "{x},{y}: {code} {label}",
     dropzoneTitle: "Arrastra una imagen aquí",
     dropzoneBody: "Haz clic o arrastra un JPG, PNG o WebP local al espacio de trabajo para generar un patrón. La imagen se procesa en tu navegador.",
@@ -527,6 +636,9 @@ export const messages: Record<Locale, Messages> = {
     mardPaletteSummary: "{colors} colores en {families} familias",
     paletteFamilyTitle: "Familia {family} / {count} colores",
     closeDialog: "Cerrar",
+    presetSmall: "Pequeño",
+    presetMedium: "Mediano",
+    presetLarge: "Grande",
   },
 };
 

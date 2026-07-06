@@ -7,7 +7,7 @@ This document owns the Fundbeads pattern-processing contract.
 1. The user uploads a JPG, PNG, or WebP through the browser file input.
 2. The file is decoded with `createImageBitmap`.
 3. The selected longest edge is normalized to an integer from `40` to `100`.
-4. Pattern dimensions are derived from the decoded image aspect ratio. For example, a `16:9` source with longest edge `80` generates `80x45`.
+4. Pattern dimensions are derived from the decoded image aspect ratio. For example, a `16:9` source with longest edge `64` generates `64x36`; the derived shorter side may be below `40` but is never below `1`.
 5. A canvas is created at the derived pattern dimensions.
 6. The full decoded image is drawn into that canvas without cropping. Because the target dimensions match the source ratio, the image is not squeezed non-proportionally.
 7. `getImageData` reads one RGBA sample per output bead cell.
@@ -97,7 +97,7 @@ Dithering is selected independently from the distance algorithm. This means RGB 
 
 Current TypeScript contracts live in `frontend/src/pattern.ts`.
 
-- `PatternDimensions`: integer `width` and `height`, each clamped to `40..100`
+- `PatternDimensions`: integer `width` and `height`; each side is bounded to `1..100`, and the longest edge is bounded to `40..100`
 - `patternLongestEdgePresets`: `52`, `64`, and `78`
 - `dimensionsForAspectRatio`: derives `PatternDimensions` from source image size and selected longest edge
 - `PatternCell`: 1-based `x`, 1-based `y`, and matched `BeadColor`
@@ -118,12 +118,12 @@ Manual editing happens after image generation and stays in browser session state
 - The generated `basePattern` is not mutated as the only source of truth.
 - Paint sets one or more cells to a valid active `mard-221` color code.
 - Pick copies a cell's effective color code into the active paint color without changing the pattern.
-- Erase removes manual overrides and restores the generated base color.
+- Erase sets one or more cells to the MARD `H1` white color (`#ffffff`).
 - Replace changes all effective cells of one MARD code to another valid MARD code.
 - Undo, redo, and reset operate on edit transactions. A paint or erase drag stroke is one transaction.
 - A new upload or reprocessing run creates a new base pattern and clears prior manual edit history.
 
-Erase never creates empty, transparent, blank, or no-bead cells. Every effective cell still maps to exactly one MARD 221 color.
+Erase never creates empty, transparent, blank, or no-bead cells. Erased cells are still regular MARD 221 cells that use code `H1`.
 
 ## Counting
 

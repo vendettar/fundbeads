@@ -78,6 +78,8 @@ type PatternAdjustmentOptions = {
 type PatternEditStateUpdater = (currentState: PatternEditState) => PatternEditState;
 type PatternPreviewOption = "showGrid" | "showCodes" | "showAxes";
 type PatternPreviewOptions = Record<PatternPreviewOption, boolean>;
+type CopyFeedbackStatus = "copySucceeded" | "copyFailed";
+type CopyStatus = { target: "list"; status: CopyFeedbackStatus } | { target: "color"; code: string; status: CopyFeedbackStatus } | null;
 type PatternEditStroke = {
   pointerId: number;
   tool: "paint" | "erase";
@@ -609,8 +611,9 @@ export function App() {
 
       <section className="px-3 py-4 sm:px-4 lg:px-6">
         {effectivePattern && patternEditState ? (
-          <div className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)_260px] xl:items-start">
+          <div className="grid min-h-0 gap-4 xl:h-[calc(100svh-170px)] xl:grid-cols-[260px_minmax(0,1fr)_260px] xl:items-stretch">
             <PatternLongestEdgeToolbar
+              className="h-full self-stretch"
               longestEdge={longestEdge}
               colorDistanceMode={colorDistanceMode}
               ditherMode={ditherMode}
@@ -667,7 +670,9 @@ export function App() {
 type SelectOption = {
   value: string;
   label: string;
+  selectedLabel?: string;
   displayLabel?: string;
+  description?: string;
 };
 
 function PatternLongestEdgeToolbar({
@@ -698,20 +703,28 @@ function PatternLongestEdgeToolbar({
         <h2 className="text-sm font-semibold">{t("gridSize")}</h2>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2">
-        {patternLongestEdgePresets.map((preset) => (
-          <button
-            key={preset}
-            type="button"
-            onClick={() => void onLongestEdgeChange(preset, { reprocess: "immediate" })}
-            className={`grid h-10 min-w-0 place-items-center rounded-md border px-2 font-mono text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-ring ${
-              longestEdge === preset
-                ? "border-secondary bg-secondary text-secondary-foreground shadow-panel"
-                : "border-border bg-background text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            {preset}
-          </button>
-        ))}
+        {patternLongestEdgePresets.map((preset) => {
+          const labelKey =
+            preset === 52
+              ? "presetSmall"
+              : preset === 64
+                ? "presetMedium"
+                : "presetLarge";
+          return (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => void onLongestEdgeChange(preset, { reprocess: "immediate" })}
+              className={`grid h-10 min-w-0 place-items-center rounded-md border px-1 text-center font-mono text-[11px] font-bold transition focus:outline-none focus:ring-2 focus:ring-ring ${
+                longestEdge === preset
+                  ? "border-secondary bg-secondary text-secondary-foreground shadow-panel"
+                  : "border-border bg-background text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <span>{t(labelKey)} {preset}</span>
+            </button>
+          );
+        })}
       </div>
       <div className="mt-4 grid gap-4 border-t border-border pt-3">
         <PatternLongestEdgeControl
@@ -805,65 +818,61 @@ function PatternAdjustmentControls({
   onChange: (options: Partial<PatternAdjustmentOptions>) => void;
 }) {
   const { formatNumber, t } = useI18n();
+  const colorDistanceDescriptionId = useId();
+  const ditherDescriptionId = useId();
   const smoothingDecreaseDisabled = smoothingLevel <= smoothingLevelMin;
   const smoothingIncreaseDisabled = smoothingLevel >= smoothingLevelMax;
   const maxColorDecreaseDisabled = maxColorCount <= maxColorCountMin;
   const maxColorIncreaseDisabled = maxColorCount >= maxColorCountMax;
+  const colorDistanceDescription = getColorDistanceModeDescription(colorDistanceMode, t);
+  const ditherDescription = getDitherModeDescription(ditherMode, t);
 
   return (
     <section className="mt-4 grid gap-4 border-t border-border pt-3" aria-label={t("colorMapping")}>
       <div className="grid gap-2">
-        <span className="text-xs font-semibold text-muted-foreground">{t("colorDistanceMode")}</span>
-        <div className="grid grid-cols-2 gap-2">
-          {colorDistanceModes.map((mode) => {
-            const label = getColorDistanceModeLabel(mode, t);
-
-            return (
-              <button
-                key={mode}
-                type="button"
-                aria-pressed={colorDistanceMode === mode}
-                title={label}
-                onClick={() => onChange({ colorDistanceMode: mode })}
-                className={`grid min-h-10 min-w-0 place-items-center rounded-md border px-2 text-center text-[11px] font-bold leading-tight transition focus:outline-none focus:ring-2 focus:ring-ring ${
-                  colorDistanceMode === mode
-                    ? "border-secondary bg-secondary text-secondary-foreground shadow-panel"
-                    : "border-border bg-background text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                <span>{label}</span>
-                <span className="font-mono text-[10px] opacity-70">{colorDistanceModeShortLabels[mode]}</span>
-              </button>
-            );
-          })}
+        <div className="grid gap-1">
+          <span className="text-xs font-semibold text-muted-foreground">{t("colorDistanceMode")}</span>
+          <span className="text-[11px] leading-snug text-muted-foreground">{t("colorDistanceModeHint")}</span>
         </div>
+        <PreferenceSelect
+          label={t("colorDistanceMode")}
+          icon={<Pipette size={15} />}
+          value={colorDistanceMode}
+          onChange={(value) => onChange({ colorDistanceMode: normalizeColorDistanceMode(value) })}
+          describedBy={colorDistanceDescriptionId}
+          className="w-full justify-between text-xs"
+          options={colorDistanceModes.map((mode) => ({
+            value: mode,
+            label: getColorDistanceModeLabel(mode, t),
+            selectedLabel: getColorDistanceModeLabel(mode, t),
+            displayLabel: colorDistanceModeShortLabels[mode],
+            description: getColorDistanceModeDescription(mode, t),
+          }))}
+        />
+        <p id={colorDistanceDescriptionId} className="min-w-0 break-words text-[10px] font-semibold leading-snug text-muted-foreground">{colorDistanceDescription}</p>
       </div>
 
       <div className="grid gap-2">
-        <span className="text-xs font-semibold text-muted-foreground">{t("ditherMode")}</span>
-        <div className="grid grid-cols-3 gap-2">
-          {ditherModes.map((mode) => {
-            const label = getDitherModeLabel(mode, t);
-
-            return (
-              <button
-                key={mode}
-                type="button"
-                aria-pressed={ditherMode === mode}
-                title={label}
-                onClick={() => onChange({ ditherMode: mode })}
-                className={`grid min-h-10 min-w-0 place-items-center rounded-md border px-2 text-center text-[11px] font-bold leading-tight transition focus:outline-none focus:ring-2 focus:ring-ring ${
-                  ditherMode === mode
-                    ? "border-secondary bg-secondary text-secondary-foreground shadow-panel"
-                    : "border-border bg-background text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                <span>{label}</span>
-                <span className="font-mono text-[10px] opacity-70">{ditherModeShortLabels[mode]}</span>
-              </button>
-            );
-          })}
+        <div className="grid gap-1">
+          <span className="text-xs font-semibold text-muted-foreground">{t("ditherMode")}</span>
+          <span className="text-[11px] leading-snug text-muted-foreground">{t("ditherModeHint")}</span>
         </div>
+        <PreferenceSelect
+          label={t("ditherMode")}
+          icon={<Replace size={15} />}
+          value={ditherMode}
+          onChange={(value) => onChange({ ditherMode: normalizeDitherMode(value) })}
+          describedBy={ditherDescriptionId}
+          className="w-full justify-between text-xs"
+          options={ditherModes.map((mode) => ({
+            value: mode,
+            label: getDitherModeLabel(mode, t),
+            selectedLabel: getDitherModeLabel(mode, t),
+            displayLabel: ditherModeShortLabels[mode],
+            description: getDitherModeDescription(mode, t),
+          }))}
+        />
+        <p id={ditherDescriptionId} className="min-w-0 break-words text-[10px] font-semibold leading-snug text-muted-foreground">{ditherDescription}</p>
       </div>
 
       <div className="grid gap-2">
@@ -962,6 +971,19 @@ function getColorDistanceModeLabel(mode: ColorDistanceMode, t: ReturnType<typeof
   return t("colorDistanceModeOklab");
 }
 
+function getColorDistanceModeDescription(mode: ColorDistanceMode, t: ReturnType<typeof useI18n>["t"]): string {
+  if (mode === "rgb-fast") {
+    return t("colorDistanceModeRgbFastDescription");
+  }
+  if (mode === "weighted-rgb") {
+    return t("colorDistanceModeWeightedRgbDescription");
+  }
+  if (mode === "lab-delta-e") {
+    return t("colorDistanceModeLabDeltaEDescription");
+  }
+  return t("colorDistanceModeOklabDescription");
+}
+
 function getDitherModeLabel(mode: DitherMode, t: ReturnType<typeof useI18n>["t"]): string {
   if (mode === "floyd-steinberg") {
     return t("ditherModeFloydSteinberg");
@@ -972,18 +994,32 @@ function getDitherModeLabel(mode: DitherMode, t: ReturnType<typeof useI18n>["t"]
   return t("ditherModeOff");
 }
 
+function getDitherModeDescription(mode: DitherMode, t: ReturnType<typeof useI18n>["t"]): string {
+  if (mode === "floyd-steinberg") {
+    return t("ditherModeFloydSteinbergDescription");
+  }
+  if (mode === "ordered") {
+    return t("ditherModeOrderedDescription");
+  }
+  return t("ditherModeOffDescription");
+}
+
 function PreferenceSelect({
   label,
   icon,
   value,
   options,
   onChange,
+  describedBy,
+  className = "",
 }: {
   label: string;
   icon: ReactNode;
   value: string;
   options: SelectOption[];
   onChange: (value: string) => void;
+  describedBy?: string;
+  className?: string;
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -996,7 +1032,8 @@ function PreferenceSelect({
     0,
     options.findIndex((option) => option.value === value),
   );
-  const selectedLabel = selectedOption?.displayLabel ?? selectedOption?.label ?? value;
+  const selectedLabel = selectedOption?.selectedLabel ?? selectedOption?.displayLabel ?? selectedOption?.label ?? value;
+  const buttonAriaLabel = `${label}: ${selectedLabel}`;
 
   const updateMenuPlacement = useCallback(() => {
     const rect = buttonRef.current?.getBoundingClientRect();
@@ -1098,7 +1135,8 @@ function PreferenceSelect({
       <button
         ref={buttonRef}
         type="button"
-        aria-label={label}
+        aria-label={buttonAriaLabel}
+        aria-describedby={describedBy}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={isOpen ? menuId : undefined}
@@ -1110,7 +1148,7 @@ function PreferenceSelect({
           openMenu();
         }}
         onKeyDown={onButtonKeyDown}
-        className="preference-select-control inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-3 text-sm font-semibold text-foreground transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
+        className={`preference-select-control inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-3 text-sm font-semibold text-foreground transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring ${className}`}
       >
         <span className="pointer-events-none text-muted-foreground">{icon}</span>
         <span className="pointer-events-none min-w-6 max-w-24 truncate">{selectedLabel}</span>
@@ -1123,7 +1161,7 @@ function PreferenceSelect({
               id={menuId}
               role="listbox"
               aria-label={label}
-              className="preference-select-menu fixed z-50 grid gap-1 rounded-md border border-border bg-card p-1 text-sm font-semibold text-foreground shadow-panel"
+              className="preference-select-menu fixed z-50 grid max-w-[min(22rem,calc(100vw-1rem))] gap-1 rounded-md border border-border bg-card p-1 text-sm font-semibold text-foreground shadow-panel"
               style={{
                 top: menuPlacement.top,
                 left: menuPlacement.left,
@@ -1138,12 +1176,15 @@ function PreferenceSelect({
                   aria-selected={option.value === value}
                   onMouseEnter={() => setActiveIndex(optionIndex)}
                   onClick={() => selectOption(option)}
-                  className={`flex min-h-9 items-center justify-between gap-3 rounded px-3 text-left transition ${
+                  className={`grid min-h-9 w-full gap-1 rounded px-3 py-2 text-left transition ${
                     optionIndex === activeIndex || option.value === value ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  <span className="truncate">{option.label}</span>
-                  {option.displayLabel ? <span className="font-mono text-xs text-muted-foreground">{option.displayLabel}</span> : null}
+                  <span className="flex min-w-0 items-start justify-between gap-3">
+                    <span className="min-w-0 truncate">{option.label}</span>
+                    {option.displayLabel ? <span className="shrink-0 font-mono text-xs text-muted-foreground">{option.displayLabel}</span> : null}
+                  </span>
+                  {option.description ? <span className="min-w-0 break-words text-[11px] font-medium leading-snug text-muted-foreground">{option.description}</span> : null}
                 </button>
               ))}
             </div>,
@@ -1237,10 +1278,10 @@ function PatternSideRail({
   onPinnedColorToggle: (colorCode: string) => string | null;
 }) {
   return (
-    <aside className="grid h-fit self-start gap-3">
+    <aside className="grid gap-3 xl:h-full xl:min-h-0 xl:self-stretch xl:grid-rows-[auto_auto_minmax(0,1fr)]">
       <ImagePreview fileName={fileName} previewUrl={previewUrl} />
       <PatternStatsCard pattern={pattern} />
-      <ColorUsageDetail pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />
+      <ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />
     </aside>
   );
 }
@@ -1407,6 +1448,7 @@ function PatternGrid({
   const [replaceSourceCode, setReplaceSourceCode] = useState(editState.activeColorCode);
   const [replaceTargetCode, setReplaceTargetCode] = useState(editState.activeColorCode);
   const [replaceStatusKey, setReplaceStatusKey] = useState<"patternEditReplaceNoSource" | null>(null);
+  const [previewOptions, setPreviewOptions] = useState(defaultPatternPreviewOptions);
   const focusRules = useMemo(
     () =>
       pattern.usage
@@ -1418,9 +1460,9 @@ function PatternGrid({
     [pattern.usage],
   );
 
-  const columns = `${baseAxisWidth}px repeat(${pattern.width}, ${baseCellSize}px) ${baseAxisWidth}px`;
-  const baseWidth = baseAxisWidth * 2 + pattern.width * baseCellSize;
-  const baseHeight = (pattern.height + 2) * baseCellSize;
+  const columns = previewOptions.showAxes ? `${baseAxisWidth}px repeat(${pattern.width}, ${baseCellSize}px) ${baseAxisWidth}px` : `repeat(${pattern.width}, ${baseCellSize}px)`;
+  const baseWidth = pattern.width * baseCellSize + (previewOptions.showAxes ? baseAxisWidth * 2 : 0);
+  const baseHeight = pattern.height * baseCellSize + (previewOptions.showAxes ? baseCellSize * 2 : 0);
   const availableWidth = Math.max(1, viewportSize.width - gridViewportPadding);
   const availableHeight = Math.max(1, viewportSize.height - gridViewportPadding);
   const fitScale = Math.min(availableWidth / baseWidth, availableHeight / baseHeight, 1);
@@ -1439,6 +1481,13 @@ function PatternGrid({
 
   const changeZoom = useCallback((direction: "in" | "out") => {
     setZoom((currentZoom) => clampZoom(currentZoom + (direction === "in" ? zoomStep : -zoomStep)));
+  }, []);
+
+  const togglePreviewOption = useCallback((option: PatternPreviewOption) => {
+    setPreviewOptions((currentOptions) => ({
+      ...currentOptions,
+      [option]: !currentOptions[option],
+    }));
   }, []);
 
   const updateEditState = useCallback(
@@ -1654,7 +1703,7 @@ function PatternGrid({
   }
 
   return (
-    <section className="border border-border bg-card shadow-panel">
+    <section className="flex h-full min-h-0 flex-col border border-border bg-card shadow-panel">
       <div className="grid gap-2 border-b border-border px-3 py-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="font-mono text-sm font-bold text-muted-foreground">
@@ -1828,7 +1877,7 @@ function PatternGrid({
         </div>
       ) : null}
       <style className="pattern-focus-rules">{focusRules}</style>
-      <div ref={viewportRef} className="h-[70vh] min-h-[320px] overflow-auto bg-card lg:h-[calc(100vh-240px)]">
+      <div ref={viewportRef} className="h-[62vh] min-h-[260px] overflow-auto bg-card xl:h-auto xl:min-h-0 xl:flex-1">
         <div className="flex min-h-full min-w-full p-3">
           <div className="m-auto shrink-0" style={{ width: scaledWidth, height: scaledHeight }}>
             <div
@@ -1847,37 +1896,68 @@ function PatternGrid({
                 transform: `scale(${effectiveScale})`,
               }}
             >
-              <AxisCorner />
-              {xLabels.map((label) => (
-                <AxisCell key={`top-${label}`} label={label} major={label % 10 === 0 || label % 5 === 0} />
-              ))}
-              <AxisCorner />
+              {previewOptions.showAxes ? (
+                <>
+                  <AxisCorner showGrid={previewOptions.showGrid} />
+                  {xLabels.map((label) => (
+                    <AxisCell key={`top-${label}`} label={label} major={label % 10 === 0 || label % 5 === 0} showGrid={previewOptions.showGrid} />
+                  ))}
+                  <AxisCorner showGrid={previewOptions.showGrid} />
+                </>
+              ) : null}
 
               {yLabels.map((row) => (
-                <Row key={row} row={row} pattern={pattern} />
+                <Row key={row} row={row} pattern={pattern} showGrid={previewOptions.showGrid} showCodes={previewOptions.showCodes} showAxes={previewOptions.showAxes} />
               ))}
 
-              <AxisCorner />
-              {xLabels.map((label) => (
-                <AxisCell key={`bottom-${label}`} label={label} major={label % 10 === 0 || label % 5 === 0} />
-              ))}
-              <AxisCorner />
+              {previewOptions.showAxes ? (
+                <>
+                  <AxisCorner showGrid={previewOptions.showGrid} />
+                  {xLabels.map((label) => (
+                    <AxisCell key={`bottom-${label}`} label={label} major={label % 10 === 0 || label % 5 === 0} showGrid={previewOptions.showGrid} />
+                  ))}
+                  <AxisCorner showGrid={previewOptions.showGrid} />
+                </>
+              ) : null}
             </div>
           </div>
+        </div>
+      </div>
+      <div className="border-t border-border px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2" aria-label={t("patternPreviewToolbar")}>
+          {[
+            { option: "showGrid" as const, label: t("patternPreviewShowGrid"), icon: <TableCellsSplit size={14} /> },
+            { option: "showCodes" as const, label: t("patternPreviewShowCodes"), icon: <Hash size={14} /> },
+            { option: "showAxes" as const, label: t("patternPreviewShowAxes"), icon: <PanelsTopLeft size={14} /> },
+          ].map(({ option, label, icon }) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={previewOptions[option]}
+              title={label}
+              onClick={() => togglePreviewOption(option)}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-bold transition focus:outline-none focus:ring-2 focus:ring-ring ${
+                previewOptions[option] ? "bg-secondary text-secondary-foreground shadow-panel" : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              {icon}
+              <span>{label}</span>
+            </button>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-function Row({ row, pattern }: { row: number; pattern: Pattern }) {
+function Row({ row, pattern, showGrid, showCodes, showAxes }: { row: number; pattern: Pattern; showGrid: boolean; showCodes: boolean; showAxes: boolean }) {
   const { paletteLabel, t } = useI18n();
   const start = (row - 1) * pattern.width;
   const rowCells = pattern.cells.slice(start, start + pattern.width);
 
   return (
     <>
-      <AxisCell label={row} major={row % 10 === 0 || row % 5 === 0} />
+      {showAxes ? <AxisCell label={row} major={row % 10 === 0 || row % 5 === 0} showGrid={showGrid} /> : null}
       {rowCells.map((cell, cellOffset) => {
         const cellIndex = start + cellOffset;
         const majorX = cell.x % 10 === 0;
@@ -1893,31 +1973,32 @@ function Row({ row, pattern }: { row: number; pattern: Pattern }) {
             data-x={cell.x}
             data-y={cell.y}
             className={[
-              "pattern-cell grid h-[22px] w-[22px] place-items-center border-b border-r border-black/40 font-mono text-[9px] font-bold leading-none",
-              majorX ? "border-r-[3px] border-r-black" : "",
-              minorX && !majorX ? "border-r-2 border-r-black/70 border-r-dashed" : "",
-              majorY ? "border-b-[3px] border-b-black" : "",
-              minorY && !majorY ? "border-b-2 border-b-black/70 border-b-dashed" : "",
+              "pattern-cell grid h-[22px] w-[22px] place-items-center font-mono text-[9px] font-bold leading-none",
+              showGrid ? "border-b border-r border-black/40" : "",
+              showGrid && majorX ? "border-r-[3px] border-r-black" : "",
+              showGrid && minorX && !majorX ? "border-r-2 border-r-black/70 border-r-dashed" : "",
+              showGrid && majorY ? "border-b-[3px] border-b-black" : "",
+              showGrid && minorY && !majorY ? "border-b-2 border-b-black/70 border-b-dashed" : "",
             ].join(" ")}
             style={{
               backgroundColor: `rgb(${cell.color.r} ${cell.color.g} ${cell.color.b})`,
-              color: readableTextColor(cell.color),
+              color: showCodes ? readableTextColor(cell.color) : "transparent",
             }}
             title={t("cellTitle", { x: cell.x, y: cell.y, code: cell.color.code, label: paletteLabel(cell.color) })}
           >
-            {cell.color.code}
+            {showCodes ? cell.color.code : null}
           </div>
         );
       })}
-      <AxisCell label={row} major={row % 10 === 0 || row % 5 === 0} />
+      {showAxes ? <AxisCell label={row} major={row % 10 === 0 || row % 5 === 0} showGrid={showGrid} /> : null}
     </>
   );
 }
 
-function AxisCell({ label, major }: { label: number; major: boolean }) {
+function AxisCell({ label, major, showGrid }: { label: number; major: boolean; showGrid: boolean }) {
   return (
     <div
-      className={`grid h-[22px] w-full place-items-center border-b border-r border-border bg-muted px-1 font-mono text-[10px] font-bold ${
+      className={`grid h-[22px] w-full place-items-center bg-muted px-1 font-mono text-[10px] font-bold ${showGrid ? "border-b border-r border-border" : ""} ${
         major ? "text-primary" : "text-muted-foreground"
       }`}
     >
@@ -1926,47 +2007,51 @@ function AxisCell({ label, major }: { label: number; major: boolean }) {
   );
 }
 
-function AxisCorner() {
-  return <div className="h-[22px] w-full border-b border-r border-border bg-foreground" />;
+function AxisCorner({ showGrid }: { showGrid: boolean }) {
+  return <div className={`h-[22px] w-full bg-foreground ${showGrid ? "border-b border-r border-border" : ""}`} />;
 }
 
 function ColorUsageDetail({
+  className = "",
   pattern,
   onPreviewColorChange,
   onPinnedColorToggle,
   compact = false,
 }: {
+  className?: string;
   pattern: Pattern;
   onPreviewColorChange: (colorCode: string | null) => void;
   onPinnedColorToggle: (colorCode: string) => string | null;
   compact?: boolean;
 }) {
   const { formatNumber, paletteLabel, t } = useI18n();
-  const [copyStatusKey, setCopyStatusKey] = useState<"copySucceeded" | "copyFailed" | null>(null);
+  const [copyStatus, setCopyStatus] = useState<CopyStatus>(null);
   const [pinnedColorCode, setPinnedColorCode] = useState<string | null>(null);
+  const listCopySucceeded = copyStatus?.target === "list" && copyStatus.status === "copySucceeded";
+  const listCopyFailed = copyStatus?.target === "list" && copyStatus.status === "copyFailed";
 
   useEffect(() => {
-    if (!copyStatusKey) {
+    if (!copyStatus) {
       return undefined;
     }
-    const timer = setTimeout(() => setCopyStatusKey(null), 1500);
+    const timer = setTimeout(() => setCopyStatus(null), 1500);
     return () => clearTimeout(timer);
-  }, [copyStatusKey]);
+  }, [copyStatus]);
 
   useEffect(() => {
     setPinnedColorCode(null);
   }, [pattern]);
 
-  async function copyText(text: string) {
+  async function copyText(text: string, target: { target: "list" } | { target: "color"; code: string }) {
     try {
       if (typeof navigator === "undefined" || !navigator.clipboard) {
         throw new Error("Clipboard is not available.");
       }
 
       await navigator.clipboard.writeText(text);
-      setCopyStatusKey("copySucceeded");
+      setCopyStatus({ ...target, status: "copySucceeded" });
     } catch {
-      setCopyStatusKey("copyFailed");
+      setCopyStatus({ ...target, status: "copyFailed" });
     }
   }
 
@@ -1975,27 +2060,29 @@ function ColorUsageDetail({
   }
 
   return (
-    <section className="color-usage-detail border border-border bg-card p-3 shadow-panel" aria-label={t("colorDetailTitle")}>
+    <section className={`color-usage-detail grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden border border-border bg-card p-3 shadow-panel ${className}`} aria-label={t("colorDetailTitle")}>
       <div className="border-b border-border pb-2">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-foreground">{t("colorDetailTitle")}</h3>
           <button
             type="button"
-            onClick={() => void copyText(formatColorUsageList(pattern, paletteLabel, formatNumber))}
+            onClick={() => void copyText(formatColorUsageList(pattern, paletteLabel, formatNumber), { target: "list" })}
             className={[
               "inline-flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-xs font-semibold transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring scale-75 origin-right",
-              copyStatusKey === "copySucceeded"
+              listCopySucceeded
                 ? "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400"
+                : listCopyFailed
+                  ? "border-destructive bg-destructive/10 text-destructive"
                 : "border-border bg-background text-foreground",
             ].join(" ")}
           >
-            {copyStatusKey === "copySucceeded" ? <Check size={13} /> : <Copy size={13} />}
-            <span>{t("copyList")}</span>
+            {listCopySucceeded ? <Check size={13} /> : listCopyFailed ? <X size={13} /> : <Copy size={13} />}
+            <span>{copyStatus?.target === "list" ? t(copyStatus.status) : t("copyList")}</span>
           </button>
         </div>
         <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{t("colorDetailHint")}</p>
       </div>
-      <div className={compact ? "mt-2 grid max-h-[28vh] overflow-y-auto" : "mt-2 grid"}>
+      <div className={compact ? "mt-2 grid max-h-[28vh] overflow-y-auto xl:max-h-none xl:min-h-0" : "mt-2 grid"}>
         <div className={compact ? "grid grid-cols-[minmax(0,1fr)_3.5rem_3.75rem_2rem] border-b border-border bg-muted px-2 py-2 text-[10px] font-bold uppercase text-muted-foreground" : "grid grid-cols-[minmax(16rem,1fr)_7rem_7rem_3rem] border-b border-border bg-muted px-3 py-2 text-xs font-bold uppercase text-muted-foreground"}>
           <span>{t("colorColumn")}</span>
           <span className="text-right">{t("countColumn")}</span>
@@ -2004,6 +2091,9 @@ function ColorUsageDetail({
         </div>
         {pattern.usage.map(({ color, count }) => {
           const isPinned = pinnedColorCode === color.code;
+          const colorCopyStatus = copyStatus?.target === "color" && copyStatus.code === color.code ? copyStatus.status : null;
+          const colorCopySucceeded = colorCopyStatus === "copySucceeded";
+          const colorCopyFailed = colorCopyStatus === "copyFailed";
 
           return (
             <div
@@ -2039,13 +2129,20 @@ function ColorUsageDetail({
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  void copyText(formatColorUsageLine({ color, count }, pattern.totalBeads, paletteLabel, formatNumber));
+                  void copyText(formatColorUsageLine({ color, count }, pattern.totalBeads, paletteLabel, formatNumber), { target: "color", code: color.code });
                 }}
-                className="ml-auto grid size-7 place-items-center rounded-md text-muted-foreground transition hover:bg-background hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                aria-label={t("copyColorLine", { code: color.code })}
-                title={t("copyColorLine", { code: color.code })}
+                className={[
+                  "ml-auto grid size-7 place-items-center rounded-md transition hover:bg-background hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring",
+                  colorCopySucceeded
+                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                    : colorCopyFailed
+                      ? "bg-destructive/10 text-destructive"
+                      : "text-muted-foreground",
+                ].join(" ")}
+                aria-label={colorCopyStatus ? t(colorCopyStatus) : t("copyColorLine", { code: color.code })}
+                title={colorCopyStatus ? t(colorCopyStatus) : t("copyColorLine", { code: color.code })}
               >
-                <Copy size={14} />
+                {colorCopySucceeded ? <Check size={14} /> : colorCopyFailed ? <X size={14} /> : <Copy size={14} />}
               </button>
             </div>
           );

@@ -391,13 +391,24 @@ describe("color usage detail contract", () => {
     expect(i18nSource).toContain("copyFailed");
   });
 
+  it("shows clipboard feedback on the copy control that triggered it", () => {
+    expect(appSource).toContain('type CopyFeedbackStatus = "copySucceeded" | "copyFailed"');
+    expect(appSource).toContain('target: "list"');
+    expect(appSource).toContain('target: "color"; code: string');
+    expect(appSource).toContain('copyStatus?.target === "list" && copyStatus.status === "copySucceeded"');
+    expect(appSource).toContain('copyStatus?.target === "color" && copyStatus.code === color.code');
+    expect(appSource).toContain('copyText(formatColorUsageList(pattern, paletteLabel, formatNumber), { target: "list" })');
+    expect(appSource).toContain('copyText(formatColorUsageLine({ color, count }, pattern.totalBeads, paletteLabel, formatNumber), { target: "color", code: color.code })');
+    expect(appSource).not.toContain('copyStatusKey === "copySucceeded"');
+  });
+
   it("places per-color details in the right rail directly below the stats card", () => {
     expect(appSource).toContain("function PatternSideRail");
     expect(appSource).toContain("onPreviewColorChange: (colorCode: string | null) => void");
     expect(appSource).toContain("onPinnedColorToggle: (colorCode: string) => string | null");
     expect(appSource).toContain("<PatternStatsCard pattern={pattern} />");
-    expect(appSource).toContain("<ColorUsageDetail pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />");
-    expect(appSource.indexOf("<PatternStatsCard pattern={pattern} />")).toBeLessThan(appSource.indexOf("<ColorUsageDetail pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />"));
+    expect(appSource).toContain('<ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />');
+    expect(appSource.indexOf("<PatternStatsCard pattern={pattern} />")).toBeLessThan(appSource.indexOf('<ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern}'));
     expect(appSource).not.toContain("{pattern ? <ColorSummary");
   });
 });
@@ -588,6 +599,79 @@ describe("upload workflow source contracts", () => {
     expect(i18nSource).toContain("maxColorCountValue");
   });
 
+  it("renders color distance and dither controls with internal preference selects", () => {
+    const colorDistanceSource = sourceBetween(appSource, 't("colorDistanceMode")', 't("ditherMode")');
+    const ditherModeSource = sourceBetween(appSource, 't("ditherMode")', 't("smoothingLevel")');
+
+    expect(appSource).toContain("description?: string");
+    expect(appSource).toContain("describedBy?: string");
+    expect(colorDistanceSource).toContain("<PreferenceSelect");
+    expect(colorDistanceSource).toContain("value={colorDistanceMode}");
+    expect(colorDistanceSource).toContain("normalizeColorDistanceMode(value)");
+    expect(colorDistanceSource).toContain("selectedLabel: getColorDistanceModeLabel(mode, t)");
+    expect(colorDistanceSource).toContain("displayLabel: colorDistanceModeShortLabels[mode]");
+    expect(colorDistanceSource).toContain("description: getColorDistanceModeDescription(mode, t)");
+    expect(colorDistanceSource).toContain("describedBy={colorDistanceDescriptionId}");
+    expect(colorDistanceSource).not.toContain("<select");
+    expect(colorDistanceSource).not.toContain("color-distance-select");
+    expect(colorDistanceSource).not.toContain("color-distance-options");
+    expect(ditherModeSource).toContain("<PreferenceSelect");
+    expect(ditherModeSource).toContain("value={ditherMode}");
+    expect(ditherModeSource).toContain("normalizeDitherMode(value)");
+    expect(ditherModeSource).toContain("selectedLabel: getDitherModeLabel(mode, t)");
+    expect(ditherModeSource).toContain("displayLabel: ditherModeShortLabels[mode]");
+    expect(ditherModeSource).toContain("description: getDitherModeDescription(mode, t)");
+    expect(ditherModeSource).toContain("describedBy={ditherDescriptionId}");
+    expect(ditherModeSource).not.toContain("<select");
+    expect(ditherModeSource).not.toContain("dither-mode-select");
+    expect(ditherModeSource).not.toContain("dither-mode-options");
+  });
+
+  it("includes the selected value in internal preference select trigger labels", () => {
+    const preferenceSelectSource = sourceBetween(appSource, "function PreferenceSelect", "function UploadWorkspace");
+    const triggerButtonSource = sourceBetween(preferenceSelectSource, "<button", "</button>");
+
+    expect(preferenceSelectSource).toContain("buttonAriaLabel");
+    expect(preferenceSelectSource).toContain('`${label}: ${selectedLabel}`');
+    expect(triggerButtonSource).toContain("aria-label={buttonAriaLabel}");
+    expect(triggerButtonSource).toContain("aria-describedby={describedBy}");
+    expect(triggerButtonSource).not.toContain("aria-label={label}");
+  });
+
+  it("explains how color distance and dither choices affect the generated pattern", () => {
+    const controlsSource = sourceBetween(appSource, "function PatternAdjustmentControls", "function getColorDistanceModeLabel");
+    const preferenceSelectSource = sourceBetween(appSource, "function PreferenceSelect", "function UploadWorkspace");
+    const colorDistanceSource = sourceBetween(appSource, 't("colorDistanceMode")', 't("ditherMode")');
+    const ditherModeSource = sourceBetween(appSource, 't("ditherMode")', 't("smoothingLevel")');
+
+    expect(messages.en.colorDistanceModeHint).toContain("nearest MARD color");
+    expect(messages.en.colorDistanceModeOklabDescription).toContain("Default");
+    expect(messages.en.colorDistanceModeRgbFastDescription).toContain("icons");
+    expect(messages.en.colorDistanceModeWeightedRgbDescription).toContain("natural");
+    expect(messages.en.colorDistanceModeLabDeltaEDescription).toContain("photos");
+    expect(messages.en.ditherModeHint).toContain("neighboring beads");
+    expect(messages.en.ditherModeOffDescription).toMatch(/clean/i);
+    expect(messages.en.ditherModeFloydSteinbergDescription).toContain("Gradients, photos, and skin tones");
+    expect(messages.en.ditherModeOrderedDescription).toContain("patterned texture");
+    expect(messages["zh-Hans"].colorDistanceModeLabDeltaE).toBe("Lab 色差");
+    expect(messages["zh-Hans"].ditherModeFloydSteinbergDescription).toContain("渐变、照片、肤色");
+    expect(messages["zh-Hant"].colorDistanceModeLabDeltaE).toBe("Lab 色差");
+    expect(messages["zh-Hant"].ditherModeFloydSteinbergDescription).toContain("漸層、照片、膚色");
+
+    expect(controlsSource).toContain("const colorDistanceDescriptionId = useId()");
+    expect(controlsSource).toContain("const ditherDescriptionId = useId()");
+    expect(controlsSource).toContain("const colorDistanceDescription = getColorDistanceModeDescription(colorDistanceMode, t)");
+    expect(controlsSource).toContain("const ditherDescription = getDitherModeDescription(ditherMode, t)");
+    expect(colorDistanceSource).toContain("description: getColorDistanceModeDescription(mode, t)");
+    expect(colorDistanceSource).toContain("id={colorDistanceDescriptionId}");
+    expect(colorDistanceSource).toContain("{colorDistanceDescription}");
+    expect(ditherModeSource).toContain("description: getDitherModeDescription(mode, t)");
+    expect(ditherModeSource).toContain("id={ditherDescriptionId}");
+    expect(ditherModeSource).toContain("{ditherDescription}");
+    expect(preferenceSelectSource).toContain("option.description");
+    expect(preferenceSelectSource).toContain("{option.description}");
+  });
+
   it("opens MARD palette details from the top action instead of the empty homepage", () => {
     expect(appSource).toContain("isPaletteOpen");
     expect(appSource).toContain("setIsPaletteOpen(true)");
@@ -630,13 +714,16 @@ describe("upload workflow source contracts", () => {
     expect(appSource).toContain("upload-preview-frame");
   });
 
-  it("keeps the original preview rail content-height sized with compact stats below it", () => {
+  it("keeps the original preview, compact stats, and scrollable details in the right rail", () => {
     expect(appSource).toContain("function PatternSideRail");
     expect(appSource).toContain("function PatternStatsCard");
-    expect(appSource).toContain("self-start");
-    expect(appSource).toContain("h-fit");
+    expect(appSource).toContain("xl:self-stretch");
+    expect(appSource).toContain("grid-rows-[auto_auto_minmax(0,1fr)]");
+    expect(appSource).toContain("overflow-hidden");
+    expect(appSource).toContain("xl:h-full");
+    expect(appSource).toContain("xl:min-h-0");
     expect(appSource).toContain("<PatternStatsCard pattern={pattern} />");
-    expect(appSource).toContain("<ColorUsageDetail pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />");
+    expect(appSource).toContain('<ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />');
     expect(appSource.indexOf("<ImagePreview")).toBeLessThan(appSource.indexOf("<PatternStatsCard"));
     expect(appSource.indexOf("<PatternStatsCard")).toBeLessThan(appSource.indexOf("<ColorUsageDetail"));
     expect(appSource).not.toContain("mt-3 grid min-h-56 place-items-center bg-background");

@@ -1,7 +1,8 @@
 import { mardPalette, type BeadColor } from "./palette";
-import { cellsToPattern, patternDimensionMax, patternDimensionMin, type Pattern, type PatternCell } from "./pattern";
+import { cellsToPattern, patternDimensionMax, patternDimensionMin, patternOutputDimensionMin, type Pattern, type PatternCell } from "./pattern";
 
 export const patternEditUndoLimit = 50;
+export const patternEditEraseColorCode = "H1";
 
 export type PatternEditTool = "view" | "paint" | "pick" | "erase" | "replace";
 
@@ -108,10 +109,16 @@ export function erasePatternCell(editState: PatternEditState, cellIndex: number,
 export function erasePatternCells(editState: PatternEditState, cellIndexes: number[], palette: BeadColor[] = mardPalette): PatternEditState {
   const colorByCode = createColorMap(palette);
   validateBasePattern(editState.basePattern, colorByCode);
+  assertKnownColor(patternEditEraseColorCode, colorByCode);
 
   return applyCellOverrides(editState, uniqueIndexes(cellIndexes), (index, currentOverride) => {
     assertCellIndex(editState.basePattern, index);
-    return currentOverride === undefined ? currentOverride : null;
+    const baseCode = editState.basePattern.cells[index].color.code;
+    const effectiveCode = currentOverride ?? baseCode;
+    if (effectiveCode === patternEditEraseColorCode) {
+      return currentOverride;
+    }
+    return baseCode === patternEditEraseColorCode ? null : patternEditEraseColorCode;
   });
 }
 
@@ -241,15 +248,19 @@ function normalizeOverrides(basePattern: Pattern, colorByCode: Map<string, BeadC
 }
 
 function validateBasePattern(pattern: Pattern, colorByCode?: Map<string, BeadColor>) {
+  const longestEdge = Math.max(pattern.width, pattern.height);
   if (
     !Number.isInteger(pattern.width) ||
     !Number.isInteger(pattern.height) ||
-    pattern.width < patternDimensionMin ||
+    pattern.width < patternOutputDimensionMin ||
     pattern.width > patternDimensionMax ||
-    pattern.height < patternDimensionMin ||
-    pattern.height > patternDimensionMax
+    pattern.height < patternOutputDimensionMin ||
+    pattern.height > patternDimensionMax ||
+    longestEdge < patternDimensionMin
   ) {
-    throw new Error(`Pattern edit state requires supported dimensions between ${patternDimensionMin} and ${patternDimensionMax}.`);
+    throw new Error(
+      `Pattern edit state requires supported dimensions with each side between ${patternOutputDimensionMin} and ${patternDimensionMax}, and longest edge between ${patternDimensionMin} and ${patternDimensionMax}.`,
+    );
   }
 
   const expectedCells = pattern.width * pattern.height;

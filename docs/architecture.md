@@ -72,7 +72,7 @@ The local pattern persistence module is also independent of pattern generation. 
 ## Contracts
 
 - Supported pattern dimensions are derived from the source image aspect ratio and selected longest edge.
-- Supported longest-edge presets are `52`, `64`, and `78`; the longest edge can be adjusted from `40` to `100`.
+- Supported longest-edge presets are `52`, `64`, and `78`; the longest edge can be adjusted from `40` to `100`, and the derived shorter side may be below `40` but not below `1`.
 - `BeadColor.code` is the stable color identity.
 - `BeadColor.label` is display copy.
 - Palette label overrides are display-only and keyed by `BeadColor.code`; stable fallback labels use `MARD {code}`.
@@ -81,7 +81,7 @@ The local pattern persistence module is also independent of pattern generation. 
 - For complete generated patterns, `Pattern.totalBeads` equals `width * height`.
 - `ColorUsage.count` is derived from pattern cells, never from formatted UI text.
 - Manual edit overrides store MARD color codes, not copied per-cell RGB objects.
-- Erasing a manual edit restores the generated base cell color and does not create empty/no-bead cells.
+- Erasing sets the effective cell color to MARD `H1` white (`#ffffff`) and does not create empty/no-bead cells.
 - Reprocessing a source image creates a new base pattern and clears manual edit history.
 - Supported locales are `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
 - Supported theme ids are `classic`, `midnight`, `ocean`, `candy`, and `mono`.

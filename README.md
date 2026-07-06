@@ -25,7 +25,7 @@ Open the Vite URL shown in the terminal. By default it is:
 http://localhost:5173
 ```
 
-Upload a JPG, PNG, or WebP, choose a longest-edge preset such as `52`, `64`, or `78`, or adjust the longest edge from `40` to `100`; the app will preserve the image ratio and generate the pattern locally in the browser.
+Upload a JPG, PNG, or WebP, choose a longest-edge preset such as `52`, `64`, or `78`, or adjust the longest edge from `40` to `100`; the app will preserve the image ratio and generate the pattern locally in the browser. The derived shorter side may be below `40` for wide or tall images, but it is never below `1`.
 
 ## What Fundbeads Does
 
@@ -35,7 +35,7 @@ The current app includes:
 
 - Local JPG/PNG/WebP upload.
 - Longest-edge presets: `52`, `64`, and `78`, with an adjustable longest edge from `40` to `100`.
-- Aspect-ratio preserving output dimensions, such as `80x45` for a `16:9` image with longest edge `80`.
+- Aspect-ratio preserving output dimensions, such as `64x36` for a `16:9` image with longest edge `64`.
 - Browser-local image decoding and canvas sampling.
 - A built-in static MARD 221 palette.
 - RGB Euclidean nearest-color matching.
@@ -43,7 +43,7 @@ The current app includes:
 - Stronger helper lines every 5 and 10 cells.
 - Default fit-to-screen pattern viewing with zoom in/out controls.
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, to zoom while the pointer is over the pattern grid.
-- Post-generation grid editing with paint, pick, erase, replace color, undo, redo, and reset controls.
+- Post-generation grid editing with paint, pick, erase to MARD `H1` white, replace color, undo, redo, and reset controls.
 - Color usage summary with swatch, MARD code, count, percent, grid size, color count, and total bead count.
 - UI language selector for `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
 - Theme selector for Classic, Midnight, Ocean, Candy, and Mono themes.

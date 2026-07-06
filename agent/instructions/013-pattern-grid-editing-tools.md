@@ -10,7 +10,7 @@ Add a compact toolbar on the main generated pattern area so users can manually r
 
 - Paint color
 - Pick color
-- Erase manual edit
+- Erase to MARD H1 white
 - Replace color
 
 The edited chart must remain a valid Fundbeads `Pattern`: every cell has one MARD 221 color, usage counts are recomputed from effective cells, and processing stays browser-local.
@@ -86,7 +86,7 @@ Add manual editing after a pattern exists:
 - The toolbar should sit in the pattern grid header or as a safe sticky overlay inside the grid section. It must not hide the first row, axes, zoom controls, or cell labels at the default fit view.
 - Users can choose a MARD 221 color and paint cells.
 - Users can pick an existing cell color from the chart and make it the active paint color.
-- Users can erase manual edits from cells, restoring the original generated color for those cells.
+- Users can erase cells to MARD `H1` white (`#ffffff`) without creating empty/no-bead cells.
 - Users can replace one effective MARD color with another across the current pattern.
 - The summary under the original-image rail and the detailed usage list must update from the edited/effective cells.
 - Manual edits are session state only in this instruction. Persistence can store edited cells later through the existing local persistence infrastructure, but this instruction must not add new persistence UI.
@@ -126,13 +126,13 @@ Keep a neutral view mode so users can inspect, zoom, scroll, copy, and highlight
 - After a successful pick, switch back to paint mode so the user can immediately continue editing.
 - Picking does not change the pattern and must not create an undo entry.
 
-### Erase Manual Edit
+### Erase To White
 
 - Active tool label: `擦除` / erase.
-- Clicking or dragging on a cell removes that cell's manual override and restores the original generated color.
+- Clicking or dragging on a cell sets that cell's effective color to MARD `H1` white (`#ffffff`).
 - Erase must not create an empty cell, transparent cell, blank bead, or "no bead" state.
 - `totalBeads` must remain `width * height`.
-- Erasing a cell with no manual override is a no-op and should not create history noise.
+- Erasing a cell that is already effectively `H1` is a no-op and should not create history noise.
 - One pointer stroke should be one undoable transaction.
 
 ### Replace Color
@@ -320,8 +320,9 @@ Required `frontend/test/pattern-edit.test.ts` coverage:
 - Painting a cell to its base color removes the override.
 - Paint and erase reject out-of-range cell indexes.
 - Picking a color updates active color in UI/controller tests without changing pattern data.
-- Erasing a painted cell removes the override and restores the base color.
-- Erasing an unedited cell is a no-op.
+- Erasing a painted cell sets it to MARD `H1` white.
+- Erasing an unedited non-H1 cell sets it to MARD `H1` white.
+- Erasing an already effective H1 cell is a no-op.
 - Replace color changes every effective source-code cell to the target code.
 - Replace removes overrides when the target color equals that cell's base color.
 - Replace color is a no-op or rejected when source and target are equal.
@@ -390,7 +391,7 @@ The second search is expected to return nothing for this instruction unless a fu
 - The generated pattern grid has a main-area editing toolbar.
 - Users can paint cells with a valid MARD 221 color.
 - Users can pick a cell color into the active paint color.
-- Users can erase manual edits and restore generated colors without creating blank cells.
+- Users can erase cells to MARD `H1` white without creating blank cells.
 - Users can replace one effective color with another across the pattern.
 - Undo, redo, and reset protect users from accidental edits.
 - Effective `Pattern.cells`, `usage`, and `totalBeads` reflect manual edits.
@@ -409,17 +410,16 @@ Date: 2026-07-06
 
 Implemented:
 
-- Added pure pattern editing helpers in `frontend/src/pattern-edit.ts` for base/effective pattern state, paint, erase, replace, undo, redo, reset, override validation, and bounded history.
+- Added pure pattern editing helpers in `frontend/src/pattern-edit.ts` for base/effective pattern state, paint, erase to MARD `H1` white, replace, undo, redo, reset, override validation, and bounded history.
 - Wired the generated grid to render effective pattern state and added grid-area edit controls for view, paint, pick, erase, replace, undo, redo, reset, active color, and replace source/target swatches.
 - Added delegated pointer editing with stroke-level transactions, skipped-cell interpolation, primary-pointer guards, pointer capture release, leave/cancel/lost-capture cleanup, and unmount cleanup.
 - Updated localized labels, focused unit/source tests, and steady-state docs for session-only manual editing and effective-cell usage counts.
 
 Verification:
 
-- `pnpm --dir frontend test:run test/pattern-edit.test.ts test/i18n-theme.test.ts` passed: 74 tests.
-- `pnpm --dir frontend test:run test/pattern-edit.test.ts test/pattern.test.ts test/i18n-theme.test.ts` passed: 116 tests.
-- `pnpm build:frontend` passed.
-- `pnpm test:frontend` passed: 139 tests.
+- `pnpm --dir frontend test:run test/pattern-edit.test.ts` passed: 14 tests.
+- `pnpm --dir frontend test:run test/pattern-edit.test.ts test/pattern.test.ts test/i18n-theme.test.ts` passed: 125 tests.
+- `pnpm test:frontend` passed: 148 tests.
 - `pnpm check` passed.
 - `git diff --check` passed.
 - `rg -n "fetch\\s*\\(|XMLHttpRequest|sendBeacon|https?://|telemetry|cdn" frontend/src frontend/test` only matched the test guard in `frontend/test/i18n-theme.test.ts`.

@@ -3,7 +3,7 @@ import { mardPalette } from "./palette";
 
 export const patternDimensionMin = 40;
 export const patternDimensionMax = 100;
-const patternOutputDimensionMin = 1;
+export const patternOutputDimensionMin = 1;
 
 export type PatternDimensions = {
   width: number;
