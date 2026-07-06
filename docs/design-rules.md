@@ -61,10 +61,12 @@ Named runtime themes live in normal application CSS as overrides for the same `-
 - The resolved output dimensions should stay visible in generated pattern context, such as the grid header or summary.
 - Pattern zoom controls should use icon buttons and expose accessible labels.
 - Pattern editing controls should stay compact in the grid header, expose accessible labels, and show active tool state.
+- Pattern grid editing must be keyboard reachable through a single board focus target; arrow keys move the active cell, and Enter or Space applies the active edit tool when applicable.
 - Paint, pick, erase, replace, undo, redo, reset, and active-color controls should not hide the first row, axes, zoom controls, or cell labels at the default fit view.
 - The active color selector and replace controls may list MARD colors, but they commit stable MARD codes and do not translate those codes.
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, should zoom only while the pointer is over the pattern grid.
 - Error states must be visible without shifting the whole page.
+- Image processing status must be visible while work is in progress, use localized text, and expose status semantics such as `role="status"`, `aria-live`, or `aria-busy` where appropriate.
 - Unsupported file errors should be direct and recoverable.
 - Language, theme, and interface style controls should use source-defined allowlists.
 - Unsupported stored preferences should fall back without throwing.
@@ -83,6 +85,9 @@ Named runtime themes live in normal application CSS as overrides for the same `-
 - Use semantic Tailwind tokens from `frontend/src/styles.css`, such as `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, and `bg-primary`.
 - Use `font-mono` for bead codes, coordinates, and counts.
 - Keep arbitrary one-off colors out of JSX unless the color is actual bead data from the palette.
+- Do not add arbitrary typography utilities such as `text-[11px]` in JSX. Define repeated micro text sizes as named classes or Tailwind v4 theme tokens in `frontend/src/styles.css`.
+- Fixed-format grid dimensions, such as bead cells and axis cells, should be named component classes in CSS rather than repeated arbitrary JSX utilities.
+- Inline styles are acceptable for runtime bead colors, dynamic grid scale/dimensions, and portal placement; otherwise prefer Tailwind utilities or named CSS classes.
 - Runtime theme and interface style overrides must preserve contrast for form controls, axes, summary text, and error states.
 
 ## Accessibility
@@ -92,3 +97,4 @@ Named runtime themes live in normal application CSS as overrides for the same `-
 - Focus states must remain visible.
 - Error text must be visible near the control that caused it.
 - Grid zoom and scroll containers should not trap keyboard navigation.
+- The editable pattern grid should expose grid semantics, a stable active cell, and concise keyboard instructions for assistive technology.

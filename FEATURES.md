@@ -21,12 +21,13 @@ This file lists the current shipped feature surface. Planned items are not imple
 - Default fit-to-screen grid view.
 - Zoom in/out controls for inspecting dense grids.
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, to zoom while the pointer is over the pattern grid.
-- Post-generation grid editing: paint with a MARD 221 color, pick a cell color, erase cells to MARD `H1` white, replace one effective color with another, undo, redo, and reset.
+- Post-generation grid editing: paint with a MARD 221 color, pick a cell color, erase cells to no-bead empty cells, replace one effective color with another, undo, redo, and reset.
+- Browser-local PNG and PDF export from the pattern preview toolbar, using the current grid, MARD code, and row/column label visibility toggles.
 - Color usage summary with swatch, MARD code, count, percent, used color count, grid size, and total bead count.
 - UI language selector for English, Simplified Chinese, Traditional Chinese, Japanese, Korean, and Spanish.
 - Localized UI copy with stable MARD code labels and optional palette label overrides.
 - Theme selector with Classic, Midnight, Ocean, Candy, and Mono themes.
-- Interface style selector with Modern and Pixel UI modes.
+- Interface style selector with Modern, Pixel, Glass Desk, and Arcade Cabinet UI modes.
 - Language, theme, and interface style preferences stored only in browser `localStorage` when available.
 - Static build and nginx Docker runtime.
 
@@ -36,13 +37,12 @@ This file lists the current shipped feature surface. Planned items are not imple
 - Dithered modes can create speckled charts and may increase bead-picking complexity.
 - Output dimensions are derived from the source image ratio and selected longest edge; the shorter side may be below `40` when the source ratio requires it. Fixed-size crop/drag framing is not implemented yet.
 - Manual edits are browser-session state only; history/draft/library UI and edit persistence are not implemented.
-- Printable export is not implemented.
+- PDF export is a single-page image export of the current pattern preview, not a paginated assembly booklet.
 - Palette filtering is not implemented.
 - Very small screens may need zooming to read individual bead codes.
 - Translations are maintained in static source files; there is no remote translation service.
 
 ## Planned
 
-- Client-side printable pattern export.
 - Optional palette filtering.
 - Better mobile grid navigation and touch zoom gestures.

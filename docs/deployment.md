@@ -14,7 +14,7 @@ GitHub (main / release branch)
         ▼  git push (webhook trigger)
 Cloudflare Pages (Native Git Integration)
         │
-        ├── Build: pnpm --dir frontend build
+        ├── Build: pnpm design:generate && pnpm build:frontend
         │
         ▼
 Cloudflare Pages Hosting (fundbeads project)
@@ -41,12 +41,17 @@ To connect the repository to Cloudflare Pages:
    | Setting | Value |
    | :--- | :--- |
    | Production branch | `release` |
-   | Build command | `pnpm --dir frontend build` |
+   | Build command | `pnpm design:generate && pnpm build:frontend` |
    | Build output directory | `frontend/dist` |
    | Root directory | `/` (repo root) |
-   | Node.js version | `22` |
+   | Node.js version | `24` |
 
 5. Click **Save and Deploy**. Cloudflare Pages will automatically trigger builds on every git push to the configured branches.
+
+The repository owns the Pages runtime behavior through static files copied by Vite:
+
+- `frontend/public/_headers` sets the CSP, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, and immutable `/assets/*` cache headers.
+- `frontend/public/_redirects` maps `/*` to `/index.html 200` so client-side routes load without adding any backend route.
 
 ---
 
@@ -71,7 +76,7 @@ To connect the repository to Cloudflare Pages:
 ### `pr-ci.yml` — Pull Request Validation
 
 - **Trigger**: Any PR targeting `main` or `release`.
-- **Steps**: Install → Build (`tsc + vite build`) → Test (`vitest run`).
+- **Steps**: Install from the root workspace → regenerate design tokens → Build (`tsc + vite build`) → validate static runtime contracts, including nginx and Cloudflare Pages static headers → scan the production bundle → Test (`vitest run`) → verify generated design CSS is committed → build and smoke test the Docker runtime.
 - **Purpose**: Gates all merges on a green build and full test suite to guarantee code stability before merging.
 
 ---
@@ -127,9 +132,10 @@ pnpm install
 pnpm dev
 
 # Build production bundle
+pnpm design:generate
 pnpm build:frontend
 
-# Build + run all tests
+# Regenerate design tokens, build, scan the bundle, validate runtime config, and run all tests
 pnpm check
 ```
 

@@ -16,7 +16,7 @@ This document owns the Fundbeads pattern-processing contract.
 9. The resulting RGB sample is matched to the nearest MARD 221 color using the selected color-distance algorithm and optional dither mode.
 10. Max-color limiting keeps the most-used colors and remaps other cells to that retained palette.
 11. The app stores the generated `Pattern` as the base pattern for the current session.
-12. Optional manual grid edits are applied as MARD-code overrides to produce an effective `Pattern`.
+12. Optional manual grid edits are applied as MARD-code or no-bead overrides to produce an effective `Pattern`.
 13. React renders the effective grid plus color usage summary.
 
 ## Palette Contract
@@ -100,14 +100,14 @@ Current TypeScript contracts live in `frontend/src/pattern.ts`.
 - `PatternDimensions`: integer `width` and `height`; each side is bounded to `1..100`, and the longest edge is bounded to `40..100`
 - `patternLongestEdgePresets`: `52`, `64`, and `78`
 - `dimensionsForAspectRatio`: derives `PatternDimensions` from source image size and selected longest edge
-- `PatternCell`: 1-based `x`, 1-based `y`, and matched `BeadColor`
+- `PatternCell`: 1-based `x`, 1-based `y`, and `BeadColor | null`; `null` means an edited no-bead cell
 - `ColorUsage`: `BeadColor` plus exact `count`
 - `Pattern`: selected `width`, selected `height`, row-major `cells`, sorted `usage`, and `totalBeads`
 
 Manual edit contracts live in `frontend/src/pattern-edit.ts`.
 
 - `PatternEditTool`: view, paint, pick, erase, or replace mode
-- `PatternEditOverrideMap`: zero-based row-major cell index mapped to a MARD color code
+- `PatternEditOverrideMap`: zero-based row-major cell index mapped to a MARD color code, or `null` for no-bead
 - `PatternEditState`: generated `basePattern`, active color, active tool, overrides, and bounded undo/redo stacks
 - Effective patterns are reconstructed from `basePattern.cells` plus overrides.
 
@@ -117,28 +117,41 @@ Manual editing happens after image generation and stays in browser session state
 
 - The generated `basePattern` is not mutated as the only source of truth.
 - Paint sets one or more cells to a valid active `mard-221` color code.
-- Pick copies a cell's effective color code into the active paint color without changing the pattern.
-- Erase sets one or more cells to the MARD `H1` white color (`#ffffff`).
+- Pick copies a cell's effective color code into the active paint color without changing the pattern; picking a no-bead cell is a no-op.
+- Erase sets one or more cells to no-bead (`PatternCell.color = null`).
 - Replace changes all effective cells of one MARD code to another valid MARD code.
 - Undo, redo, and reset operate on edit transactions. A paint or erase drag stroke is one transaction.
 - A new upload or reprocessing run creates a new base pattern and clears prior manual edit history.
 
-Erase never creates empty, transparent, blank, or no-bead cells. Erased cells are still regular MARD 221 cells that use code `H1`.
+No-bead cells render as empty cells, are excluded from usage counts, and do not display a MARD code.
 
 ## Counting
 
-Every output cell maps to exactly one bead. When manual edits exist, counting uses the effective cells.
+Generated output starts with every cell mapped to one bead. When manual edits exist, counting uses the effective cells and excludes no-bead cells.
 
-- `totalBeads = cells.length`
+- `totalBeads = cells.filter((cell) => cell.color).length`
 - For complete generated patterns, `totalBeads = width * height`
+- After erasing cells to no-bead, `totalBeads` can be less than `width * height`
 - Summary rows are sorted by count descending, then by MARD code for stable ties.
 - Summary counts are derived from cells, not from rendered UI text.
+
+## Export
+
+PNG and PDF exports are generated in the browser from the effective `Pattern`, not from a screenshot of the DOM. Manual paint, erase, replace, undo, redo, and reset operations therefore affect exported files through the same pattern contract used by the preview grid and counts. No-bead cells export as blank background cells without MARD codes.
+
+The export renderer uses the current preview toggles:
+
+- `显示网格` / show grid controls normal grid lines plus stronger 5/10 helper lines.
+- `显示色号` / show color codes controls MARD code text inside cells.
+- `显示行列编号` / show row/column labels controls the top, bottom, left, and right axes.
+
+PDF export is a single-page image layout generated client-side. It is not a paginated assembly booklet and does not add a separate color-summary page.
 
 ## Known Limitations
 
 - Fixed-size crop, zoom, or drag-to-frame controls are not implemented yet.
 - Palette label overrides are optional; stable fallback labels use `MARD {code}`.
-- There is no printable export yet.
+- Exported PDF files use a single-page pattern image; pagination and export metadata panels are not implemented yet.
 - Large source image decoding depends on browser capabilities. The output grid itself is bounded to at most `100x100`.
 
 ## Verification

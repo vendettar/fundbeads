@@ -38,16 +38,20 @@ The current app includes:
 - Aspect-ratio preserving output dimensions, such as `64x36` for a `16:9` image with longest edge `64`.
 - Browser-local image decoding and canvas sampling.
 - A built-in static MARD 221 palette.
-- RGB Euclidean nearest-color matching.
+- Color-distance algorithms: Perceptual Oklab default, Fast RGB, Weighted RGB, and Lab Delta-E 76.
+- Dither modes: Off default, Floyd-Steinberg, and Ordered.
+- Smoothing level control from `0` to `3`.
+- Max color count control from `2` to `64`, default `24`.
 - A high-contrast grid with top, bottom, left, and right axes.
 - Stronger helper lines every 5 and 10 cells.
 - Default fit-to-screen pattern viewing with zoom in/out controls.
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, to zoom while the pointer is over the pattern grid.
-- Post-generation grid editing with paint, pick, erase to MARD `H1` white, replace color, undo, redo, and reset controls.
+- Post-generation grid editing with paint, pick, erase to no-bead empty cells, replace color, undo, redo, and reset controls.
+- Browser-local PNG and PDF export from the pattern preview toolbar, using the current grid, MARD code, and row/column label visibility toggles.
 - Color usage summary with swatch, MARD code, count, percent, grid size, color count, and total bead count.
 - UI language selector for `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
 - Theme selector for Classic, Midnight, Ocean, Candy, and Mono themes.
-- Interface style selector for Modern and Pixel UI modes.
+- Interface style selector for Modern, Pixel, Glass Desk, and Arcade Cabinet UI modes.
 
 ## Local-Only Safety Model
 
@@ -62,6 +66,7 @@ The Docker image serves static files only.
 - `frontend/`: Vite React application.
 - `frontend/src/pattern.ts`: Image sampling, color matching, pattern contracts, and count summaries.
 - `frontend/src/pattern-edit.ts`: Browser-session pattern editing, effective pattern reconstruction, and edit history.
+- `frontend/src/pattern-export.ts`: Browser-local PNG and PDF pattern export rendering.
 - `frontend/src/palette.ts`: Stable exports for the active MARD palette contract.
 - `frontend/src/palettes/mard.ts`: Built-in static MARD 221 palette data.
 - `frontend/src/i18n.tsx`: Supported locales, translations, optional palette label overrides, and i18n provider.
@@ -83,8 +88,9 @@ Run commands from the repository root.
 | `pnpm design:lint` | Lint `DESIGN.md`. |
 | `pnpm dev` | Start the Vite dev server. |
 | `pnpm build:frontend` | Typecheck and build the frontend. |
+| `pnpm dist:check` | Scan the production bundle for unapproved network or telemetry primitives. |
 | `pnpm test:frontend` | Run frontend tests. |
-| `pnpm check` | Run the build and test gate. |
+| `pnpm check` | Regenerate design tokens, lint `DESIGN.md`, build the frontend, scan the bundle, and run frontend tests. |
 | `pnpm preview:frontend` | Preview the production build locally. |
 
 ## Docker
@@ -120,6 +126,5 @@ Key docs:
 
 Planned items are not current features:
 
-- Add client-side printable pattern export.
 - Add optional palette filtering.
 - Improve mobile grid navigation.

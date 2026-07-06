@@ -52,17 +52,19 @@ This document records durable product, architecture, runtime, and design decisio
 - Future MARD editions, such as `mard-288`, must use the same static palette schema with a distinct slug and validation tests.
 - Runtime code, docs, and tests should not describe the active palette as mock.
 
-## 5. RGB Euclidean Matching
+## 5. Local Color-Distance Matching and Dithering
 
-**Decision**: Sampled RGB colors are matched to the nearest palette entry by squared RGB Euclidean distance.
+**Decision**: Sampled RGB colors are matched to the nearest palette entry by a local, deterministic color-distance mode. The default mode is Perceptual Oklab. Fast RGB, Weighted RGB, and Lab Delta-E 76 are selectable alternatives. Dither mode is selected separately, with Off as the default and Floyd-Steinberg and Ordered as selectable modes.
 
-**Rationale**: RGB distance is simple, deterministic, and matches the current MVP requirement.
+**Rationale**: Perceptual Oklab gives a better default match for most photos and artwork while keeping processing local and bounded. RGB and Lab alternatives remain useful for predictable comparisons, pixel art, and traditional color-difference workflows. Keeping dithering separate lets users choose between clean solid regions and more textured gradients.
 
 **Implications**:
 
 - Matching behavior belongs in pure utilities.
-- Tests should cover representative nearest-color outcomes.
-- Alternative color spaces require a new decision.
+- Tests should cover representative nearest-color outcomes for each distance mode.
+- Dither modes must remain deterministic and preserve row-major coordinates, transparent-pixel compositing, and count totals.
+- When two colors have the same distance, current behavior keeps the first matching palette entry by array order.
+- Future distance or dither modes require deterministic tests, performance review, and documentation updates.
 
 ## 6. White Background for Transparent Pixels
 

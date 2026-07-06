@@ -38,7 +38,7 @@ There is no backend service. The production Docker image serves static files wit
 - `frontend/src/interface-style.tsx`: Interface style allowlist, static style ids, and interface style preference provider.
 - `frontend/src/browser-storage.ts`: Safe optional access to browser `localStorage`.
 - `frontend/src/local-pattern-db.ts`: Browser-local IndexedDB infrastructure for compact, validated pattern records.
-- `frontend/src/pattern.ts`: `PatternDimensions`, aspect-ratio dimension derivation, `Pattern`, `PatternCell`, `ColorUsage`, image sampling, RGB matching, readable text color, and count summaries.
+- `frontend/src/pattern.ts`: `PatternDimensions`, aspect-ratio dimension derivation, `Pattern`, `PatternCell`, `ColorUsage`, image sampling, local color-distance matching, dithering, readable text color, and count summaries.
 - `frontend/src/pattern-edit.ts`: Browser-session manual editing state, MARD-code overrides, effective pattern reconstruction, replace, reset, undo, and redo.
 - `frontend/src/palette.ts`: Stable exports for the active MARD palette contract.
 - `frontend/src/palettes/mard.ts`: Built-in static MARD 221 palette definition.
@@ -57,13 +57,14 @@ There is no backend service. The production Docker image serves static files wit
 4. A canvas draws the full image at the derived pattern dimensions without cropping.
 5. Pixel data is read from the canvas.
 6. Transparent pixels are composited against white.
-7. Each sampled RGB value is matched to the nearest MARD 221 palette entry by squared RGB Euclidean distance.
-8. Pattern cells are produced in row-major order with 1-based `x` and `y` coordinates.
-9. The generated `Pattern` becomes the edit state's `basePattern`.
-10. Manual overrides are stored as row-major cell indexes mapped to MARD color codes.
-11. The app reconstructs an effective `Pattern` from the base cells plus overrides.
-12. Usage counts are derived from effective cells.
-13. React renders the effective grid and summary.
+7. Each sampled RGB value is matched to the nearest MARD 221 palette entry using the selected local color-distance mode. The default mode is Perceptual Oklab; Fast RGB, Weighted RGB, and Lab Delta-E 76 are also available.
+8. Optional dither mode is applied locally. The default mode is Off; Floyd-Steinberg and Ordered are also available.
+9. Pattern cells are produced in row-major order with 1-based `x` and `y` coordinates.
+10. The generated `Pattern` becomes the edit state's `basePattern`.
+11. Manual overrides are stored as row-major cell indexes mapped to MARD color codes, or `null` for no-bead cells.
+12. The app reconstructs an effective `Pattern` from the base cells plus overrides.
+13. Usage counts are derived from effective cells with no-bead cells excluded.
+14. React renders the effective grid and summary.
 
 Language, theme, and interface style preferences are independent of pattern processing. They are read from browser `localStorage` when available, validated against source-defined allowlists, and ignored if storage is blocked or contains unsupported values.
 
@@ -77,17 +78,20 @@ The local pattern persistence module is also independent of pattern generation. 
 - `BeadColor.label` is display copy.
 - Palette label overrides are display-only and keyed by `BeadColor.code`; stable fallback labels use `MARD {code}`.
 - `PatternCell.x` and `PatternCell.y` are 1-based.
-- `Pattern.totalBeads` equals `Pattern.cells.length`.
+- `Pattern.totalBeads` equals the number of cells with a non-null color.
 - For complete generated patterns, `Pattern.totalBeads` equals `width * height`.
 - `ColorUsage.count` is derived from pattern cells, never from formatted UI text.
-- Manual edit overrides store MARD color codes, not copied per-cell RGB objects.
-- Erasing sets the effective cell color to MARD `H1` white (`#ffffff`) and does not create empty/no-bead cells.
+- Color matching uses bundled local algorithms only. The default distance mode is Perceptual Oklab; RGB Fast, Weighted RGB, and Lab Delta-E 76 remain selectable modes.
+- Dithering is selected separately from distance mode. Off is the default; Floyd-Steinberg and Ordered are selectable deterministic modes.
+- Manual edit overrides store MARD color codes or `null` for no-bead cells, not copied per-cell RGB objects.
+- Erasing sets the effective cell color to no-bead (`null`) and decreases `totalBeads`.
 - Reprocessing a source image creates a new base pattern and clears manual edit history.
 - Supported locales are `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
 - Supported theme ids are `classic`, `midnight`, `ocean`, `candy`, and `mono`.
-- Supported interface style ids are `modern` and `pixel`.
+- Supported interface style ids are `modern`, `pixel`, `glass-desk`, and `arcade-cabinet`.
 - Local pattern records use the `fundbeads-pattern-store` IndexedDB name and versioned compact records.
 - Persisted pattern records carry `width`, `height`, `paletteSlug`, `paletteVersion`, row-major `cellCodes`, `usage`, `totalBeads`, and `usedColorCount`.
+- Current compact local pattern records require every stored cell to have a MARD code; no-bead edited cells are not representable by that schema yet.
 - Persisted pattern records must validate against the active `mard-221` palette before they are reconstructed into `Pattern`.
 
 ## Boundaries
@@ -99,11 +103,13 @@ The local pattern persistence module is also independent of pattern generation. 
 - Source image blobs are not automatically stored. Any future source image persistence must be explicit and bounded.
 - The app must not load remote translations, remote themes, telemetry, or CDN UI assets without an explicit product decision.
 - MARD 221 is the active built-in palette slug.
-- Export and print flows are backlog items, not current runtime surfaces.
+- Browser-local PNG and PDF export are current runtime surfaces rendered from the effective pattern and preview toggles.
+- Paginated print booklets, export metadata panels, and color-summary export pages remain backlog items.
 
 ## Verification Commands
 
 ```sh
 pnpm design:generate
 pnpm check
+pnpm dist:check
 ```
