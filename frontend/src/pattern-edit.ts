@@ -2,13 +2,12 @@ import { mardPalette, type BeadColor } from "./palette";
 import { cellsToPattern, patternDimensionMax, patternDimensionMin, patternOutputDimensionMin, type Pattern, type PatternCell } from "./pattern";
 
 export const patternEditUndoLimit = 50;
-export const patternEditEraseColorCode = "H1";
 
 export type PatternEditTool = "view" | "paint" | "pick" | "erase" | "replace";
 
-export type PatternEditOverrideMap = Record<number, string>;
+export type PatternEditOverrideMap = Record<number, string | null>;
 
-type PatternEditOverrideValue = string | null;
+type PatternEditOverrideValue = string | null | undefined;
 
 export type PatternEditTransaction = {
   before: Record<number, PatternEditOverrideValue>;
@@ -35,7 +34,7 @@ type PatternEditStateOptions = {
 export function createPatternEditState(basePattern: Pattern, palette: BeadColor[], options: PatternEditStateOptions = {}): PatternEditState {
   const colorByCode = createColorMap(palette);
   validateBasePattern(basePattern, colorByCode);
-  const activeColorCode = options.activeColorCode ?? basePattern.cells[0]?.color.code ?? palette[0]?.code;
+  const activeColorCode = options.activeColorCode ?? basePattern.cells[0]?.color?.code ?? palette[0]?.code;
   assertKnownColor(activeColorCode, colorByCode);
 
   return {
@@ -53,9 +52,15 @@ export function getEffectivePattern(editState: PatternEditState, palette: BeadCo
   validateBasePattern(editState.basePattern, colorByCode);
   const overrides = normalizeOverrides(editState.basePattern, colorByCode, editState.overrides);
   const cells: PatternCell[] = editState.basePattern.cells.map((cell, index) => {
-    const overrideCode = overrides[index];
-    if (!overrideCode) {
+    if (!Object.hasOwn(overrides, index)) {
       return cell;
+    }
+    const overrideCode = overrides[index];
+    if (overrideCode === null) {
+      return {
+        ...cell,
+        color: null,
+      };
     }
     return {
       ...cell,
@@ -93,12 +98,12 @@ export function paintPatternCells(editState: PatternEditState, cellIndexes: numb
 
   return applyCellOverrides(editState, uniqueIndexes(cellIndexes), (index, currentOverride) => {
     assertCellIndex(editState.basePattern, index);
-    const baseCode = editState.basePattern.cells[index].color.code;
-    const effectiveCode = currentOverride ?? baseCode;
+    const baseCode = editState.basePattern.cells[index].color?.code;
+    const effectiveCode = currentOverride === undefined ? baseCode : currentOverride;
     if (effectiveCode === colorCode) {
       return currentOverride;
     }
-    return colorCode === baseCode ? null : colorCode;
+    return colorCode === baseCode ? undefined : colorCode;
   });
 }
 
@@ -109,16 +114,14 @@ export function erasePatternCell(editState: PatternEditState, cellIndex: number,
 export function erasePatternCells(editState: PatternEditState, cellIndexes: number[], palette: BeadColor[] = mardPalette): PatternEditState {
   const colorByCode = createColorMap(palette);
   validateBasePattern(editState.basePattern, colorByCode);
-  assertKnownColor(patternEditEraseColorCode, colorByCode);
 
   return applyCellOverrides(editState, uniqueIndexes(cellIndexes), (index, currentOverride) => {
     assertCellIndex(editState.basePattern, index);
-    const baseCode = editState.basePattern.cells[index].color.code;
-    const effectiveCode = currentOverride ?? baseCode;
-    if (effectiveCode === patternEditEraseColorCode) {
+    const effectiveCode = currentOverride === undefined ? editState.basePattern.cells[index].color?.code : currentOverride;
+    if (effectiveCode === null) {
       return currentOverride;
     }
-    return baseCode === patternEditEraseColorCode ? null : patternEditEraseColorCode;
+    return null;
   });
 }
 
@@ -136,12 +139,12 @@ export function replacePatternColor(editState: PatternEditState, fromCode: strin
     editState,
     editState.basePattern.cells.map((_, index) => index),
     (index, currentOverride) => {
-      const baseCode = editState.basePattern.cells[index].color.code;
-      const effectiveCode = currentOverride ?? baseCode;
+      const baseCode = editState.basePattern.cells[index].color?.code;
+      const effectiveCode = currentOverride === undefined ? baseCode : currentOverride;
       if (effectiveCode !== fromCode) {
         return currentOverride;
       }
-      return toCode === baseCode ? null : toCode;
+      return toCode === baseCode ? undefined : toCode;
     },
   );
 }
@@ -152,7 +155,7 @@ export function resetPatternEdits(editState: PatternEditState): PatternEditState
     return editState;
   }
 
-  return applyCellOverrides(editState, changedIndexes, () => null);
+  return applyCellOverrides(editState, changedIndexes, () => undefined);
 }
 
 export function undoPatternEdit(editState: PatternEditState): PatternEditState {
@@ -183,21 +186,24 @@ export function redoPatternEdit(editState: PatternEditState): PatternEditState {
   };
 }
 
-function applyCellOverrides(editState: PatternEditState, cellIndexes: number[], nextValueForIndex: (cellIndex: number, currentOverride: string | undefined) => string | null | undefined): PatternEditState {
+function applyCellOverrides(editState: PatternEditState, cellIndexes: number[], nextValueForIndex: (cellIndex: number, currentOverride: PatternEditOverrideValue) => PatternEditOverrideValue): PatternEditState {
   const nextOverrides = { ...editState.overrides };
   const before: Record<number, PatternEditOverrideValue> = {};
   const after: Record<number, PatternEditOverrideValue> = {};
 
   for (const index of cellIndexes) {
-    const currentOverride = nextOverrides[index];
+    const currentOverride = Object.hasOwn(nextOverrides, index) ? nextOverrides[index] : undefined;
     const nextOverride = nextValueForIndex(index, currentOverride);
     if (nextOverride === currentOverride) {
       continue;
     }
 
-    before[index] = currentOverride ?? null;
-    if (nextOverride === null || nextOverride === undefined) {
+    before[index] = currentOverride;
+    if (nextOverride === undefined) {
       delete nextOverrides[index];
+      after[index] = undefined;
+    } else if (nextOverride === null) {
+      nextOverrides[index] = null;
       after[index] = null;
     } else {
       nextOverrides[index] = nextOverride;
@@ -222,7 +228,7 @@ function applyTransactionValues(overrides: PatternEditOverrideMap, values: Recor
 
   for (const [indexKey, colorCode] of Object.entries(values)) {
     const index = Number(indexKey);
-    if (colorCode === null) {
+    if (colorCode === undefined) {
       delete nextOverrides[index];
     } else {
       nextOverrides[index] = colorCode;
@@ -238,8 +244,12 @@ function normalizeOverrides(basePattern: Pattern, colorByCode: Map<string, BeadC
   for (const [indexKey, colorCode] of Object.entries(overrides)) {
     const index = Number(indexKey);
     assertCellIndex(basePattern, index);
+    if (colorCode === null) {
+      normalized[index] = null;
+      continue;
+    }
     assertKnownColor(colorCode, colorByCode);
-    if (basePattern.cells[index].color.code !== colorCode) {
+    if (basePattern.cells[index].color?.code !== colorCode) {
       normalized[index] = colorCode;
     }
   }
@@ -271,7 +281,7 @@ function validateBasePattern(pattern: Pattern, colorByCode?: Map<string, BeadCol
   pattern.cells.forEach((cell, index) => {
     const expectedX = (index % pattern.width) + 1;
     const expectedY = Math.floor(index / pattern.width) + 1;
-    if (cell.x !== expectedX || cell.y !== expectedY || !cell.color.code) {
+    if (cell.x !== expectedX || cell.y !== expectedY || !cell.color?.code) {
       throw new Error("Pattern edit state requires a complete row-major base pattern.");
     }
     if (colorByCode) {
