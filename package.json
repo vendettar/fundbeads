@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "check": "pnpm build:frontend && pnpm test:frontend",
+    "check": "pnpm design:generate && pnpm design:lint && pnpm build:frontend && pnpm runtime:check && pnpm dist:check && pnpm test:frontend",
     "test:frontend": "pnpm --dir frontend test:run",
+    "style:check": "node scripts/check-tailwind-text-tokens.mjs",
+    "dist:check": "node scripts/check-dist-local-only.mjs",
+    "runtime:check": "node scripts/check-static-runtime.mjs",
     "design:generate": "node scripts/generate-design-theme.mjs",
     "design:lint": "designmd lint DESIGN.md",
     "design:export": "pnpm design:generate",
@@ -14,6 +17,7 @@
     "preview:frontend": "pnpm --dir frontend preview"
   },
   "packageManager": "pnpm@11.9.0",
+
   "devDependencies": {
     "@google/design.md": "^0.3.0"
   }

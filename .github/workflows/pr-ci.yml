@@ -20,22 +20,39 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9aee9f6b99c9f1d8a0c33a90f14690833910609a
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
         with:
-          version: 11
+          version: 11.9.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm --dir frontend install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
-      - name: Build & Test
+      - name: Lint Design, Build & Test
         run: pnpm check
+
+      - name: Verify generated design tokens are committed
+        run: git diff --exit-code -- frontend/src/design-theme.generated.css
+
+      - name: Build Docker image
+        run: docker build -t fundbeads:ci .
+
+      - name: Smoke test Docker runtime
+        run: |
+          docker run --rm -d -p 8080:80 --name fundbeads-ci fundbeads:ci
+          trap 'docker rm -f fundbeads-ci' EXIT
+          curl --retry 10 --retry-delay 1 --retry-connrefused -fsS http://127.0.0.1:8080/ >/dev/null
+          curl --retry 10 --retry-delay 1 --retry-connrefused -fsSI http://127.0.0.1:8080/ > /tmp/fundbeads-headers.txt
+          grep -qi '^content-security-policy:' /tmp/fundbeads-headers.txt
+          grep -qi '^x-content-type-options: nosniff' /tmp/fundbeads-headers.txt
+          grep -qi '^referrer-policy: no-referrer' /tmp/fundbeads-headers.txt
+          grep -qi '^permissions-policy:' /tmp/fundbeads-headers.txt
