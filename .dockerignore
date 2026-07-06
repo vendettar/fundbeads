@@ -7,3 +7,10 @@ test-results
 frontend/test-results
 .pnpm-store
 *.tsbuildinfo
+/local
+.env
+.env.*
+*.pem
+*.key
+*.cert
+.npmrc
