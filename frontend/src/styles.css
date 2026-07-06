@@ -126,6 +126,20 @@
   display: none;
 }
 
+.upload-preview-frame {
+  background-image:
+    linear-gradient(45deg, color-mix(in srgb, var(--beads-foreground) 8%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in srgb, var(--beads-foreground) 8%, transparent) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--beads-foreground) 8%, transparent) 75%),
+    linear-gradient(-45deg, transparent 75%, color-mix(in srgb, var(--beads-foreground) 8%, transparent) 75%);
+  background-position:
+    0 0,
+    0 10px,
+    10px -10px,
+    -10px 0;
+  background-size: 20px 20px;
+}
+
 body {
   min-width: 320px;
   min-height: 100vh;
@@ -147,4 +161,135 @@ textarea {
 select option {
   background: var(--beads-card);
   color: var(--beads-foreground);
+}
+
+.preference-select-menu {
+  max-width: min(18rem, calc(100vw - 1rem));
+}
+
+.pattern-dimension-slider {
+  height: 1.5rem;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.pattern-dimension-slider::-webkit-slider-runnable-track {
+  height: 0.5rem;
+  border: 1px solid var(--beads-border);
+  border-radius: 999px;
+  background: var(--beads-muted);
+}
+
+.pattern-dimension-slider::-moz-range-track {
+  height: 0.5rem;
+  border: 1px solid var(--beads-border);
+  border-radius: 999px;
+  background: var(--beads-muted);
+}
+
+.pattern-dimension-slider::-webkit-slider-thumb {
+  width: 1rem;
+  height: 1rem;
+  margin-top: -0.3125rem;
+  appearance: none;
+  border: 2px solid var(--beads-primary);
+  border-radius: 0.25rem;
+  background: var(--beads-card);
+  box-shadow: var(--beads-shadow-panel);
+}
+
+.pattern-dimension-slider::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--beads-primary);
+  border-radius: 0.25rem;
+  background: var(--beads-card);
+  box-shadow: var(--beads-shadow-panel);
+}
+
+:root[data-ui-style="pixel"] {
+  --pixel-ink: color-mix(in srgb, var(--beads-foreground) 86%, black);
+  --pixel-shadow-sm: 2px 2px 0 var(--pixel-ink);
+  --pixel-shadow: 4px 4px 0 var(--pixel-ink);
+  --pixel-shadow-pressed: 1px 1px 0 var(--pixel-ink);
+  --beads-shadow-panel: var(--pixel-shadow);
+}
+
+[data-ui-style="pixel"] body {
+  background-color: var(--beads-background);
+  background-image:
+    linear-gradient(45deg, rgb(0 0 0 / 0.05) 25%, transparent 25%),
+    linear-gradient(-45deg, rgb(0 0 0 / 0.05) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgb(0 0 0 / 0.05) 75%),
+    linear-gradient(-45deg, transparent 75%, rgb(0 0 0 / 0.05) 75%);
+  background-position:
+    0 0,
+    0 9px,
+    9px -9px,
+    -9px 0;
+  background-size: 18px 18px;
+}
+
+[data-ui-style="pixel"] main {
+  background: transparent;
+}
+
+[data-ui-style="pixel"] h1,
+[data-ui-style="pixel"] h2,
+[data-ui-style="pixel"] h3,
+[data-ui-style="pixel"] button,
+[data-ui-style="pixel"] .preference-select-control {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", "Noto Sans CJK SC",
+    "Noto Sans CJK JP", "Noto Sans CJK KR", monospace;
+  letter-spacing: 0;
+}
+
+[data-ui-style="pixel"] .rounded,
+[data-ui-style="pixel"] .rounded-md,
+[data-ui-style="pixel"] .rounded-lg,
+[data-ui-style="pixel"] .rounded-full {
+  border-radius: 2px;
+}
+
+[data-ui-style="pixel"] main > section:first-of-type {
+  border-bottom-width: 2px;
+  border-color: var(--pixel-ink);
+}
+
+[data-ui-style="pixel"] section.border,
+[data-ui-style="pixel"] aside.border {
+  border-width: 2px;
+  border-color: var(--pixel-ink);
+}
+
+[data-ui-style="pixel"] button,
+[data-ui-style="pixel"] label[role="button"],
+[data-ui-style="pixel"] .preference-select-control,
+[data-ui-style="pixel"] .preference-select-menu {
+  border-width: 2px;
+  box-shadow: var(--pixel-shadow-sm);
+}
+
+[data-ui-style="pixel"] button:hover,
+[data-ui-style="pixel"] label[role="button"]:hover,
+[data-ui-style="pixel"] .preference-select-control:hover {
+  transform: translate(-1px, -1px);
+}
+
+[data-ui-style="pixel"] button:active,
+[data-ui-style="pixel"] label[role="button"]:active,
+[data-ui-style="pixel"] .preference-select-control:active {
+  box-shadow: var(--pixel-shadow-pressed);
+  transform: translate(1px, 1px);
+}
+
+[data-ui-style="pixel"] button:disabled {
+  box-shadow: none;
+  transform: none;
+}
+
+[data-ui-style="pixel"] .original-preview-image {
+  image-rendering: pixelated;
 }

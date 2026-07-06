@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
 import { getLocalStorage } from "./browser-storage";
+import type { InterfaceStyleId } from "./interface-style";
 import type { BeadColor } from "./palette";
 import type { ThemeId } from "./themes";
 
@@ -26,8 +27,14 @@ type Messages = {
   title: string;
   subtitle: string;
   uploadImage: string;
+  gridSize: string;
+  patternLongestEdge: string;
+  outputDimensions: string;
+  decreasePatternLongestEdge: string;
+  increasePatternLongestEdge: string;
   language: string;
   theme: string;
+  interfaceStyle: string;
   waitingForImage: string;
   processing: string;
   unsupportedImage: string;
@@ -41,6 +48,14 @@ type Messages = {
   headerStats: string;
   gridZoomStatus: string;
   cellTitle: string;
+  dropzoneTitle: string;
+  dropzoneBody: string;
+  dropzoneHint: string;
+  originalPreviewTitle: string;
+  originalPreviewAlt: string;
+  mardPaletteTitle: string;
+  mardPaletteSummary: string;
+  paletteFamilyTitle: string;
 };
 
 export const messages: Record<Locale, Messages> = {
@@ -49,8 +64,14 @@ export const messages: Record<Locale, Messages> = {
     title: "Image to Perler Bead Pattern",
     subtitle: "Convert a local JPG or PNG into a labeled MARD bead grid. Processing stays in your browser.",
     uploadImage: "Upload image",
+    gridSize: "Pattern size",
+    patternLongestEdge: "Longest edge",
+    outputDimensions: "Output size",
+    decreasePatternLongestEdge: "Decrease longest edge",
+    increasePatternLongestEdge: "Increase longest edge",
     language: "Language",
     theme: "Theme",
+    interfaceStyle: "Interface",
     waitingForImage: "Waiting for image",
     processing: "Processing",
     unsupportedImage: "Upload a JPG or PNG image.",
@@ -60,18 +81,32 @@ export const messages: Record<Locale, Messages> = {
     zoomOut: "Zoom out",
     zoomIn: "Zoom in",
     summaryTitle: "Summary",
-    patternSummary: "Pattern [{size}x{size} / {colors} Colors / Total {total} Beads]",
+    patternSummary: "Pattern [{width}x{height} / {colors} Colors / Total {total} Beads]",
     headerStats: "{colors} Colors / Total {total} Beads",
-    gridZoomStatus: "{size}x{size} / {zoom}",
+    gridZoomStatus: "{width}x{height} / {zoom}",
     cellTitle: "{x},{y}: {code} {label}",
+    dropzoneTitle: "Drop an image here",
+    dropzoneBody: "Click or drag a local JPG/PNG into this workspace to generate a bead pattern. The image stays in your browser.",
+    dropzoneHint: "JPG / PNG",
+    originalPreviewTitle: "Original",
+    originalPreviewAlt: "Original image preview for {fileName}",
+    mardPaletteTitle: "MARD 221 Palette",
+    mardPaletteSummary: "{colors} colors across {families} families",
+    paletteFamilyTitle: "{family} family / {count} colors",
   },
   "zh-Hans": {
     appName: "Fundbeads",
     title: "图片转拼豆图纸",
     subtitle: "把本地 JPG 或 PNG 转成带 MARD 编号的拼豆网格。所有处理都在浏览器本地完成。",
     uploadImage: "上传图片",
+    gridSize: "图纸尺寸",
+    patternLongestEdge: "图纸最长边",
+    outputDimensions: "输出尺寸",
+    decreasePatternLongestEdge: "减少图纸最长边",
+    increasePatternLongestEdge: "增加图纸最长边",
     language: "语言",
     theme: "主题",
+    interfaceStyle: "界面",
     waitingForImage: "等待图片",
     processing: "处理中",
     unsupportedImage: "请上传 JPG 或 PNG 图片。",
@@ -81,18 +116,32 @@ export const messages: Record<Locale, Messages> = {
     zoomOut: "缩小",
     zoomIn: "放大",
     summaryTitle: "统计",
-    patternSummary: "图纸 [{size}x{size} / {colors} 色 / 共 {total} 颗]",
+    patternSummary: "图纸 [{width}x{height} / {colors} 色 / 共 {total} 颗]",
     headerStats: "{colors} 色 / 共 {total} 颗",
-    gridZoomStatus: "{size}x{size} / {zoom}",
+    gridZoomStatus: "{width}x{height} / {zoom}",
     cellTitle: "{x},{y}: {code} {label}",
+    dropzoneTitle: "把图片拖到这里",
+    dropzoneBody: "点击或拖入本地 JPG/PNG 图片以生成拼豆图纸。图片只会在浏览器本地处理。",
+    dropzoneHint: "JPG / PNG",
+    originalPreviewTitle: "原图",
+    originalPreviewAlt: "{fileName} 的原图预览",
+    mardPaletteTitle: "MARD 221 色卡",
+    mardPaletteSummary: "{families} 个色系，共 {colors} 色",
+    paletteFamilyTitle: "{family} 色系 / {count} 色",
   },
   "zh-Hant": {
     appName: "Fundbeads",
     title: "圖片轉拼豆圖紙",
     subtitle: "把本機 JPG 或 PNG 轉成帶 MARD 編號的拼豆網格。所有處理都在瀏覽器本機完成。",
     uploadImage: "上傳圖片",
+    gridSize: "圖紙尺寸",
+    patternLongestEdge: "圖紙最長邊",
+    outputDimensions: "輸出尺寸",
+    decreasePatternLongestEdge: "減少圖紙最長邊",
+    increasePatternLongestEdge: "增加圖紙最長邊",
     language: "語言",
     theme: "主題",
+    interfaceStyle: "介面",
     waitingForImage: "等待圖片",
     processing: "處理中",
     unsupportedImage: "請上傳 JPG 或 PNG 圖片。",
@@ -102,18 +151,32 @@ export const messages: Record<Locale, Messages> = {
     zoomOut: "縮小",
     zoomIn: "放大",
     summaryTitle: "統計",
-    patternSummary: "圖紙 [{size}x{size} / {colors} 色 / 共 {total} 顆]",
+    patternSummary: "圖紙 [{width}x{height} / {colors} 色 / 共 {total} 顆]",
     headerStats: "{colors} 色 / 共 {total} 顆",
-    gridZoomStatus: "{size}x{size} / {zoom}",
+    gridZoomStatus: "{width}x{height} / {zoom}",
     cellTitle: "{x},{y}: {code} {label}",
+    dropzoneTitle: "把圖片拖到這裡",
+    dropzoneBody: "點擊或拖入本機 JPG/PNG 圖片以產生拼豆圖紙。圖片只會在瀏覽器本機處理。",
+    dropzoneHint: "JPG / PNG",
+    originalPreviewTitle: "原圖",
+    originalPreviewAlt: "{fileName} 的原圖預覽",
+    mardPaletteTitle: "MARD 221 色卡",
+    mardPaletteSummary: "{families} 個色系，共 {colors} 色",
+    paletteFamilyTitle: "{family} 色系 / {count} 色",
   },
   ja: {
     appName: "Fundbeads",
     title: "画像からアイロンビーズ図案へ",
     subtitle: "ローカルの JPG または PNG を、MARD コード付きのビーズグリッドに変換します。処理はブラウザー内で完結します。",
     uploadImage: "画像をアップロード",
+    gridSize: "図案サイズ",
+    patternLongestEdge: "図案の最長辺",
+    outputDimensions: "出力サイズ",
+    decreasePatternLongestEdge: "図案の最長辺を減らす",
+    increasePatternLongestEdge: "図案の最長辺を増やす",
     language: "言語",
     theme: "テーマ",
+    interfaceStyle: "表示",
     waitingForImage: "画像待ち",
     processing: "処理中",
     unsupportedImage: "JPG または PNG 画像をアップロードしてください。",
@@ -123,18 +186,32 @@ export const messages: Record<Locale, Messages> = {
     zoomOut: "縮小",
     zoomIn: "拡大",
     summaryTitle: "集計",
-    patternSummary: "図案 [{size}x{size} / {colors} 色 / 合計 {total} 個]",
+    patternSummary: "図案 [{width}x{height} / {colors} 色 / 合計 {total} 個]",
     headerStats: "{colors} 色 / 合計 {total} 個",
-    gridZoomStatus: "{size}x{size} / {zoom}",
+    gridZoomStatus: "{width}x{height} / {zoom}",
     cellTitle: "{x},{y}: {code} {label}",
+    dropzoneTitle: "ここに画像をドロップ",
+    dropzoneBody: "ローカルの JPG/PNG をクリックまたはドラッグして、ビーズ図案を生成します。画像はブラウザー内で処理されます。",
+    dropzoneHint: "JPG / PNG",
+    originalPreviewTitle: "元画像",
+    originalPreviewAlt: "{fileName} の元画像プレビュー",
+    mardPaletteTitle: "MARD 221 パレット",
+    mardPaletteSummary: "{families} 系統 / {colors} 色",
+    paletteFamilyTitle: "{family} 系統 / {count} 色",
   },
   ko: {
     appName: "Fundbeads",
     title: "이미지를 펄러비즈 패턴으로 변환",
     subtitle: "로컬 JPG 또는 PNG를 MARD 코드가 표시된 비즈 그리드로 변환합니다. 모든 처리는 브라우저에서만 이루어집니다.",
     uploadImage: "이미지 업로드",
+    gridSize: "패턴 크기",
+    patternLongestEdge: "패턴 최장변",
+    outputDimensions: "출력 크기",
+    decreasePatternLongestEdge: "패턴 최장변 줄이기",
+    increasePatternLongestEdge: "패턴 최장변 늘리기",
     language: "언어",
     theme: "테마",
+    interfaceStyle: "인터페이스",
     waitingForImage: "이미지 대기 중",
     processing: "처리 중",
     unsupportedImage: "JPG 또는 PNG 이미지를 업로드하세요.",
@@ -144,18 +221,32 @@ export const messages: Record<Locale, Messages> = {
     zoomOut: "축소",
     zoomIn: "확대",
     summaryTitle: "요약",
-    patternSummary: "패턴 [{size}x{size} / {colors}색 / 총 {total}개]",
+    patternSummary: "패턴 [{width}x{height} / {colors}색 / 총 {total}개]",
     headerStats: "{colors}색 / 총 {total}개",
-    gridZoomStatus: "{size}x{size} / {zoom}",
+    gridZoomStatus: "{width}x{height} / {zoom}",
     cellTitle: "{x},{y}: {code} {label}",
+    dropzoneTitle: "이미지를 여기에 놓으세요",
+    dropzoneBody: "로컬 JPG/PNG를 클릭하거나 끌어와 비즈 도안을 생성합니다. 이미지는 브라우저에서만 처리됩니다.",
+    dropzoneHint: "JPG / PNG",
+    originalPreviewTitle: "원본",
+    originalPreviewAlt: "{fileName} 원본 이미지 미리보기",
+    mardPaletteTitle: "MARD 221 팔레트",
+    mardPaletteSummary: "{families}개 계열 / {colors}색",
+    paletteFamilyTitle: "{family} 계열 / {count}색",
   },
   es: {
     appName: "Fundbeads",
     title: "Imagen a patrón de Perler Beads",
     subtitle: "Convierte un JPG o PNG local en una cuadrícula de cuentas con códigos MARD. Todo se procesa en tu navegador.",
     uploadImage: "Subir imagen",
+    gridSize: "Tamaño del patrón",
+    patternLongestEdge: "Lado más largo",
+    outputDimensions: "Tamaño de salida",
+    decreasePatternLongestEdge: "Reducir lado más largo",
+    increasePatternLongestEdge: "Aumentar lado más largo",
     language: "Idioma",
     theme: "Tema",
+    interfaceStyle: "Interfaz",
     waitingForImage: "Esperando imagen",
     processing: "Procesando",
     unsupportedImage: "Sube una imagen JPG o PNG.",
@@ -165,165 +256,28 @@ export const messages: Record<Locale, Messages> = {
     zoomOut: "Alejar",
     zoomIn: "Acercar",
     summaryTitle: "Resumen",
-    patternSummary: "Patrón [{size}x{size} / {colors} colores / Total {total} cuentas]",
+    patternSummary: "Patrón [{width}x{height} / {colors} colores / Total {total} cuentas]",
     headerStats: "{colors} colores / Total {total} cuentas",
-    gridZoomStatus: "{size}x{size} / {zoom}",
+    gridZoomStatus: "{width}x{height} / {zoom}",
     cellTitle: "{x},{y}: {code} {label}",
+    dropzoneTitle: "Arrastra una imagen aquí",
+    dropzoneBody: "Haz clic o arrastra un JPG/PNG local al espacio de trabajo para generar un patrón. La imagen se procesa en tu navegador.",
+    dropzoneHint: "JPG / PNG",
+    originalPreviewTitle: "Original",
+    originalPreviewAlt: "Vista previa original de {fileName}",
+    mardPaletteTitle: "Paleta MARD 221",
+    mardPaletteSummary: "{colors} colores en {families} familias",
+    paletteFamilyTitle: "Familia {family} / {count} colores",
   },
 };
 
 export const paletteLabels: Record<Locale, Record<string, string>> = {
   en: {},
-  "zh-Hans": {
-    A1: "白色",
-    A2: "奶油色",
-    A5: "棕褐色",
-    B1: "黑色",
-    B4: "炭灰色",
-    C2: "樱桃红",
-    C5: "珊瑚色",
-    D1: "南瓜橙",
-    D4: "金菊黄",
-    E2: "柠檬黄",
-    F1: "薄荷绿",
-    F4: "凯利绿",
-    G2: "青绿色",
-    G6: "水蓝色",
-    H1: "天蓝色",
-    H7: "宝蓝色",
-    H14: "海军蓝",
-    J2: "薰衣草紫",
-    J6: "紫色",
-    K1: "泡泡糖粉",
-    K4: "洋红色",
-    L2: "巧克力色",
-    L7: "铁锈色",
-    M1: "浅灰色",
-    M4: "石板灰",
-    N2: "桃色",
-    N6: "沙色",
-    P3: "橄榄绿",
-  },
-  "zh-Hant": {
-    A1: "白色",
-    A2: "奶油色",
-    A5: "棕褐色",
-    B1: "黑色",
-    B4: "炭灰色",
-    C2: "櫻桃紅",
-    C5: "珊瑚色",
-    D1: "南瓜橙",
-    D4: "金菊黃",
-    E2: "檸檬黃",
-    F1: "薄荷綠",
-    F4: "凱利綠",
-    G2: "青綠色",
-    G6: "水藍色",
-    H1: "天藍色",
-    H7: "寶藍色",
-    H14: "海軍藍",
-    J2: "薰衣草紫",
-    J6: "紫色",
-    K1: "泡泡糖粉",
-    K4: "洋紅色",
-    L2: "巧克力色",
-    L7: "鐵鏽色",
-    M1: "淺灰色",
-    M4: "石板灰",
-    N2: "桃色",
-    N6: "沙色",
-    P3: "橄欖綠",
-  },
-  ja: {
-    A1: "ホワイト",
-    A2: "クリーム",
-    A5: "タン",
-    B1: "ブラック",
-    B4: "チャコール",
-    C2: "チェリーレッド",
-    C5: "コーラル",
-    D1: "パンプキン",
-    D4: "ゴールデンロッド",
-    E2: "レモン",
-    F1: "ミント",
-    F4: "ケリーグリーン",
-    G2: "ティール",
-    G6: "アクア",
-    H1: "スカイブルー",
-    H7: "ロイヤルブルー",
-    H14: "ネイビー",
-    J2: "ラベンダー",
-    J6: "パープル",
-    K1: "バブルガム",
-    K4: "マゼンタ",
-    L2: "チョコレート",
-    L7: "ラスト",
-    M1: "ライトグレー",
-    M4: "スレート",
-    N2: "ピーチ",
-    N6: "サンド",
-    P3: "オリーブ",
-  },
-  ko: {
-    A1: "화이트",
-    A2: "크림",
-    A5: "탄",
-    B1: "블랙",
-    B4: "차콜",
-    C2: "체리 레드",
-    C5: "코랄",
-    D1: "펌킨",
-    D4: "골든로드",
-    E2: "레몬",
-    F1: "민트",
-    F4: "켈리 그린",
-    G2: "틸",
-    G6: "아쿠아",
-    H1: "스카이 블루",
-    H7: "로열 블루",
-    H14: "네이비",
-    J2: "라벤더",
-    J6: "퍼플",
-    K1: "버블검",
-    K4: "마젠타",
-    L2: "초콜릿",
-    L7: "러스트",
-    M1: "라이트 그레이",
-    M4: "슬레이트",
-    N2: "피치",
-    N6: "샌드",
-    P3: "올리브",
-  },
-  es: {
-    A1: "Blanco",
-    A2: "Crema",
-    A5: "Canela",
-    B1: "Negro",
-    B4: "Carbón",
-    C2: "Rojo cereza",
-    C5: "Coral",
-    D1: "Calabaza",
-    D4: "Dorado",
-    E2: "Limón",
-    F1: "Menta",
-    F4: "Verde intenso",
-    G2: "Verde azulado",
-    G6: "Aguamarina",
-    H1: "Azul cielo",
-    H7: "Azul real",
-    H14: "Azul marino",
-    J2: "Lavanda",
-    J6: "Morado",
-    K1: "Rosa chicle",
-    K4: "Magenta",
-    L2: "Chocolate",
-    L7: "Óxido",
-    M1: "Gris claro",
-    M4: "Pizarra",
-    N2: "Melocotón",
-    N6: "Arena",
-    P3: "Oliva",
-  },
+  "zh-Hans": {},
+  "zh-Hant": {},
+  ja: {},
+  ko: {},
+  es: {},
 };
 
 export const themeLabels: Record<Locale, Record<ThemeId, string>> = {
@@ -371,6 +325,33 @@ export const themeLabels: Record<Locale, Record<ThemeId, string>> = {
   },
 };
 
+export const interfaceStyleLabels: Record<Locale, Record<InterfaceStyleId, string>> = {
+  en: {
+    modern: "Modern",
+    pixel: "Pixel",
+  },
+  "zh-Hans": {
+    modern: "现代",
+    pixel: "像素",
+  },
+  "zh-Hant": {
+    modern: "現代",
+    pixel: "像素",
+  },
+  ja: {
+    modern: "モダン",
+    pixel: "ピクセル",
+  },
+  ko: {
+    modern: "모던",
+    pixel: "픽셀",
+  },
+  es: {
+    modern: "Moderno",
+    pixel: "Píxel",
+  },
+};
+
 type I18nContextValue = {
   locale: Locale;
   setLocale: (locale: string) => void;
@@ -378,6 +359,7 @@ type I18nContextValue = {
   formatNumber: (value: number) => string;
   paletteLabel: (color: BeadColor) => string;
   themeLabel: (theme: ThemeId) => string;
+  interfaceStyleLabel: (style: InterfaceStyleId) => string;
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -439,6 +421,10 @@ export function getThemeLabel(locale: Locale, theme: ThemeId): string {
   return themeLabels[locale][theme] ?? themeLabels[defaultLocale][theme];
 }
 
+export function getInterfaceStyleLabel(locale: Locale, style: InterfaceStyleId): string {
+  return interfaceStyleLabels[locale][style] ?? interfaceStyleLabels[defaultLocale][style];
+}
+
 export function readStoredLocale(storage: Storage | undefined): string | null {
   try {
     return storage?.getItem(localeStorageKey) ?? null;
@@ -478,6 +464,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       formatNumber: (number) => formatter.format(number),
       paletteLabel: (color) => getPaletteLabel(locale, color),
       themeLabel: (nextTheme) => getThemeLabel(locale, nextTheme),
+      interfaceStyleLabel: (style) => getInterfaceStyleLabel(locale, style),
     };
   }, [locale]);
 

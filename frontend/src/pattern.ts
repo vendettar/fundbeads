@@ -1,7 +1,18 @@
 import type { BeadColor, Rgb } from "./palette";
 import { mardPalette } from "./palette";
 
-export type GridSize = 52 | 64 | 78;
+export const patternDimensionMin = 40;
+export const patternDimensionMax = 100;
+
+export type PatternDimensions = {
+  width: number;
+  height: number;
+};
+
+export type SourceImageSize = {
+  width: number;
+  height: number;
+};
 
 export type PatternCell = {
   x: number;
@@ -15,13 +26,51 @@ export type ColorUsage = {
 };
 
 export type Pattern = {
-  size: GridSize;
+  width: number;
+  height: number;
   cells: PatternCell[];
   usage: ColorUsage[];
   totalBeads: number;
 };
 
-export const gridSizes: GridSize[] = [52, 64, 78];
+export const patternLongestEdgePresets = [52, 64, 78];
+
+export function normalizePatternDimension(value: number): number {
+  if (!Number.isFinite(value)) {
+    return patternDimensionMin;
+  }
+
+  return Math.min(patternDimensionMax, Math.max(patternDimensionMin, Math.round(value)));
+}
+
+export function normalizePatternDimensions(dimensions: PatternDimensions): PatternDimensions {
+  return {
+    width: normalizePatternDimension(dimensions.width),
+    height: normalizePatternDimension(dimensions.height),
+  };
+}
+
+export function dimensionsForAspectRatio(source: SourceImageSize, longestEdge: number): PatternDimensions {
+  const normalizedLongestEdge = normalizePatternDimension(longestEdge);
+  const sourceWidth = source.width;
+  const sourceHeight = source.height;
+
+  if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight) || sourceWidth <= 0 || sourceHeight <= 0) {
+    return { width: normalizedLongestEdge, height: normalizedLongestEdge };
+  }
+
+  if (sourceWidth >= sourceHeight) {
+    return normalizePatternDimensions({
+      width: normalizedLongestEdge,
+      height: (normalizedLongestEdge * sourceHeight) / sourceWidth,
+    });
+  }
+
+  return normalizePatternDimensions({
+    width: (normalizedLongestEdge * sourceWidth) / sourceHeight,
+    height: normalizedLongestEdge,
+  });
+}
 
 export function colorDistance(a: Rgb, b: Rgb): number {
   const red = a.r - b.r;
@@ -43,9 +92,19 @@ export function nearestBeadColor(color: Rgb, palette: BeadColor[] = mardPalette)
     throw new Error("Palette must include at least one color.");
   }
 
-  return palette.reduce((closest, candidate) => {
-    return colorDistance(color, candidate) < colorDistance(color, closest) ? candidate : closest;
-  }, palette[0]);
+  let closest = palette[0];
+  let closestDistance = colorDistance(color, closest);
+
+  for (let index = 1; index < palette.length; index += 1) {
+    const candidate = palette[index];
+    const candidateDistance = colorDistance(color, candidate);
+    if (candidateDistance < closestDistance) {
+      closest = candidate;
+      closestDistance = candidateDistance;
+    }
+  }
+
+  return closest;
 }
 
 export function readableTextColor(color: Rgb): "#111111" | "#ffffff" {
@@ -68,22 +127,28 @@ export function summarizeCells(cells: PatternCell[]): ColorUsage[] {
   return [...counts.values()].sort((a, b) => b.count - a.count || a.color.code.localeCompare(b.color.code));
 }
 
-export function cellsToPattern(cells: PatternCell[], size: GridSize): Pattern {
+export function cellsToPattern(cells: PatternCell[], dimensions: PatternDimensions): Pattern {
+  const { width, height } = normalizePatternDimensions(dimensions);
+
   return {
-    size,
+    width,
+    height,
     cells,
     usage: summarizeCells(cells),
     totalBeads: cells.length,
   };
 }
 
-export async function imageFileToPattern(file: File, size: GridSize): Promise<Pattern> {
+export async function imageFileToPattern(file: File, longestEdge: number, onSourceImageSize?: (source: SourceImageSize) => void): Promise<Pattern> {
   const bitmap = await createImageBitmap(file);
 
   try {
+    const sourceImageSize = { width: bitmap.width, height: bitmap.height };
+    onSourceImageSize?.(sourceImageSize);
+    const { width, height } = dimensionsForAspectRatio(sourceImageSize, longestEdge);
     const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = width;
+    canvas.height = height;
 
     const context = canvas.getContext("2d", { willReadFrequently: true });
     if (!context) {
@@ -91,15 +156,15 @@ export async function imageFileToPattern(file: File, size: GridSize): Promise<Pa
     }
 
     context.imageSmoothingEnabled = true;
-    context.clearRect(0, 0, size, size);
-    context.drawImage(bitmap, 0, 0, size, size);
+    context.clearRect(0, 0, width, height);
+    context.drawImage(bitmap, 0, 0, width, height);
 
-    const pixels = context.getImageData(0, 0, size, size).data;
+    const pixels = context.getImageData(0, 0, width, height).data;
     const cells: PatternCell[] = [];
 
-    for (let y = 0; y < size; y += 1) {
-      for (let x = 0; x < size; x += 1) {
-        const offset = (y * size + x) * 4;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const offset = (y * width + x) * 4;
         const alpha = pixels[offset + 3] / 255;
         const sampled = compositeRgbOverWhite({ r: pixels[offset], g: pixels[offset + 1], b: pixels[offset + 2] }, alpha);
 
@@ -111,7 +176,7 @@ export async function imageFileToPattern(file: File, size: GridSize): Promise<Pa
       }
     }
 
-    return cellsToPattern(cells, size);
+    return cellsToPattern(cells, { width, height });
   } finally {
     bitmap.close();
   }
