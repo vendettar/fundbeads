@@ -4,11 +4,16 @@ import { getLocalStorage } from "./browser-storage";
 
 export const interfaceStyleStorageKey = "fundbeads.interfaceStyle";
 
-export const interfaceStyles = [{ id: "modern" }, { id: "pixel" }] as const;
+export const interfaceStyles = [
+  { id: "modern" },
+  { id: "pixel" },
+  { id: "glass-desk" },
+  { id: "arcade-cabinet" },
+] as const;
 
 export type InterfaceStyleId = (typeof interfaceStyles)[number]["id"];
 
-export const defaultInterfaceStyle: InterfaceStyleId = "modern";
+export const defaultInterfaceStyle: InterfaceStyleId = "pixel";
 
 type InterfaceStyleContextValue = {
   interfaceStyle: InterfaceStyleId;

@@ -1,0 +1,108 @@
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.upload-preview-frame {
+  background-image:
+    linear-gradient(45deg, color-mix(in srgb, var(--beads-foreground) 8%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in srgb, var(--beads-foreground) 8%, transparent) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--beads-foreground) 8%, transparent) 75%),
+    linear-gradient(-45deg, transparent 75%, color-mix(in srgb, var(--beads-foreground) 8%, transparent) 75%);
+  background-position:
+    0 0,
+    0 10px,
+    10px -10px,
+    -10px 0;
+  background-size: 20px 20px;
+}
+
+.text-caption-compact {
+  font-size: 0.6875rem;
+}
+
+.text-caption-dense {
+  font-size: 0.625rem;
+}
+
+.preset-label-condensed {
+  display: inline-block;
+  transform: scale(0.85);
+  transform-origin: center;
+  white-space: nowrap;
+}
+
+select option {
+  background: var(--beads-card);
+  color: var(--beads-foreground);
+}
+
+.preference-select-menu {
+  max-width: min(18rem, calc(100vw - 1rem));
+}
+
+.pattern-dimension-slider {
+  height: 1.5rem;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.pattern-dimension-slider::-webkit-slider-runnable-track {
+  height: 0.5rem;
+  border: 1px solid var(--beads-border);
+  border-radius: 999px;
+  background: var(--beads-muted);
+}
+
+.pattern-dimension-slider::-moz-range-track {
+  height: 0.5rem;
+  border: 1px solid var(--beads-border);
+  border-radius: 999px;
+  background: var(--beads-muted);
+}
+
+.pattern-dimension-slider::-webkit-slider-thumb {
+  width: 1rem;
+  height: 1rem;
+  margin-top: -0.3125rem;
+  appearance: none;
+  border: 2px solid var(--beads-primary);
+  border-radius: 0.25rem;
+  background: var(--beads-card);
+  box-shadow: var(--beads-shadow-panel);
+}
+
+.pattern-dimension-slider::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--beads-primary);
+  border-radius: 0.25rem;
+  background: var(--beads-card);
+  box-shadow: var(--beads-shadow-panel);
+}
+
+.pattern-dimension-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--beads-ring), var(--beads-shadow-panel);
+}
+
+.pattern-dimension-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--beads-ring), var(--beads-shadow-panel);
+}
+
+@keyframes hover-shake {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-1deg) scale(1.02); }
+  75% { transform: rotate(1deg) scale(1.02); }
+}
+
+.hover-shake {
+  transition: transform 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+.hover-shake:hover {
+  animation: hover-shake 0.2s ease-in-out;
+}

@@ -1,0 +1,26 @@
+.pattern-grid-board:focus-visible {
+  outline: 3px solid var(--beads-ring);
+  outline-offset: 4px;
+}
+
+.pattern-cell[data-keyboard-active="true"] {
+  box-shadow: inset 0 0 0 3px var(--beads-ring), inset 0 0 0 5px var(--beads-background);
+}
+
+.pattern-cell {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+.pattern-cell-code {
+  font-size: 0.5625rem;
+}
+
+.pattern-axis-label {
+  height: 1.375rem;
+  font-size: 0.625rem;
+}
+
+.pattern-axis-corner {
+  height: 1.375rem;
+}

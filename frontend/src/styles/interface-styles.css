@@ -1,0 +1,158 @@
+:root[data-ui-style="pixel"] {
+  --pixel-ink: color-mix(in srgb, var(--beads-foreground) 86%, black);
+  --pixel-shadow-sm: 2px 2px 0 var(--pixel-ink);
+  --pixel-shadow: 4px 4px 0 var(--pixel-ink);
+  --pixel-shadow-pressed: 1px 1px 0 var(--pixel-ink);
+  --beads-shadow-panel: var(--pixel-shadow);
+}
+
+[data-ui-style="pixel"] body {
+  background-color: var(--beads-background);
+  background-image:
+    linear-gradient(45deg, rgb(0 0 0 / 0.05) 25%, transparent 25%),
+    linear-gradient(-45deg, rgb(0 0 0 / 0.05) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgb(0 0 0 / 0.05) 75%),
+    linear-gradient(-45deg, transparent 75%, rgb(0 0 0 / 0.05) 75%);
+  background-position:
+    0 0,
+    0 9px,
+    9px -9px,
+    -9px 0;
+  background-size: 18px 18px;
+}
+
+[data-ui-style="pixel"] main {
+  background: transparent;
+}
+
+[data-ui-style="pixel"] h1,
+[data-ui-style="pixel"] h2,
+[data-ui-style="pixel"] h3,
+[data-ui-style="pixel"] button,
+[data-ui-style="pixel"] .preference-select-control {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", "Noto Sans CJK SC",
+    "Noto Sans CJK JP", "Noto Sans CJK KR", monospace;
+  letter-spacing: 0;
+}
+
+[data-ui-style="pixel"] .rounded,
+[data-ui-style="pixel"] .rounded-md,
+[data-ui-style="pixel"] .rounded-lg,
+[data-ui-style="pixel"] .rounded-full {
+  border-radius: 2px;
+}
+
+[data-ui-style="pixel"] main > section:first-of-type {
+  border-bottom-width: 2px;
+  border-color: var(--pixel-ink);
+}
+
+[data-ui-style="pixel"] section.border,
+[data-ui-style="pixel"] aside.border {
+  border-width: 2px;
+  border-color: var(--pixel-ink);
+}
+
+[data-ui-style="pixel"] button,
+[data-ui-style="pixel"] label[role="button"],
+[data-ui-style="pixel"] .preference-select-control,
+[data-ui-style="pixel"] .preference-select-menu {
+  border-width: 2px;
+  box-shadow: var(--pixel-shadow-sm);
+}
+
+[data-ui-style="pixel"] button:hover,
+[data-ui-style="pixel"] label[role="button"]:hover,
+[data-ui-style="pixel"] .preference-select-control:hover {
+  transform: translate(-1px, -1px);
+}
+
+[data-ui-style="pixel"] button:active,
+[data-ui-style="pixel"] label[role="button"]:active,
+[data-ui-style="pixel"] .preference-select-control:active {
+  box-shadow: var(--pixel-shadow-pressed);
+  transform: translate(1px, 1px);
+}
+
+[data-ui-style="pixel"] button:disabled {
+  box-shadow: none;
+  transform: none;
+}
+
+[data-ui-style="pixel"] .original-preview-image {
+  image-rendering: pixelated;
+}
+
+:root[data-ui-style="glass-desk"] {
+  --glass-line: color-mix(in srgb, var(--beads-card) 52%, var(--beads-border));
+  --glass-sheen: linear-gradient(135deg, color-mix(in srgb, white 42%, transparent), color-mix(in srgb, var(--beads-primary) 8%, transparent));
+  --beads-shadow-panel: 0 18px 45px rgb(0 0 0 / 0.16), inset 0 1px 0 color-mix(in srgb, white 42%, transparent);
+}
+
+[data-ui-style="glass-desk"] body {
+  background:
+    radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--beads-primary) 18%, transparent), transparent 32rem),
+    radial-gradient(circle at 82% 4%, color-mix(in srgb, var(--beads-secondary) 15%, transparent), transparent 26rem),
+    var(--beads-background);
+}
+
+[data-ui-style="glass-desk"] main > section:first-of-type,
+[data-ui-style="glass-desk"] section.border,
+[data-ui-style="glass-desk"] aside.border,
+[data-ui-style="glass-desk"] .preference-select-menu {
+  border-color: var(--glass-line);
+  background-image: var(--glass-sheen);
+  box-shadow: var(--beads-shadow-panel);
+  backdrop-filter: blur(14px) saturate(1.2);
+}
+
+[data-ui-style="glass-desk"] button,
+[data-ui-style="glass-desk"] label[role="button"],
+[data-ui-style="glass-desk"] .preference-select-control {
+  border-color: var(--glass-line);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.12), inset 0 1px 0 color-mix(in srgb, white 36%, transparent);
+}
+
+:root[data-ui-style="arcade-cabinet"] {
+  --arcade-rail: color-mix(in srgb, var(--beads-foreground) 86%, black);
+  --arcade-glow: color-mix(in srgb, var(--beads-accent) 32%, transparent);
+  --beads-shadow-panel: 0 0 0 2px var(--arcade-rail), 0 0 24px var(--arcade-glow), 6px 6px 0 var(--arcade-rail);
+}
+
+[data-ui-style="arcade-cabinet"] body {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--beads-primary) 12%, transparent) 25%, transparent 25%) 0 0 / 24px 24px,
+    linear-gradient(225deg, color-mix(in srgb, var(--beads-secondary) 12%, transparent) 25%, transparent 25%) 0 0 / 24px 24px,
+    var(--beads-background);
+}
+
+[data-ui-style="arcade-cabinet"] h1,
+[data-ui-style="arcade-cabinet"] h2,
+[data-ui-style="arcade-cabinet"] h3,
+[data-ui-style="arcade-cabinet"] button,
+[data-ui-style="arcade-cabinet"] .preference-select-control {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", "Noto Sans CJK SC",
+    "Noto Sans CJK JP", "Noto Sans CJK KR", monospace;
+  letter-spacing: 0;
+}
+
+[data-ui-style="arcade-cabinet"] .rounded,
+[data-ui-style="arcade-cabinet"] .rounded-md,
+[data-ui-style="arcade-cabinet"] .rounded-lg,
+[data-ui-style="arcade-cabinet"] .rounded-full {
+  border-radius: 6px;
+}
+
+[data-ui-style="arcade-cabinet"] main > section:first-of-type,
+[data-ui-style="arcade-cabinet"] section.border,
+[data-ui-style="arcade-cabinet"] aside.border,
+[data-ui-style="arcade-cabinet"] button,
+[data-ui-style="arcade-cabinet"] label[role="button"],
+[data-ui-style="arcade-cabinet"] .preference-select-control,
+[data-ui-style="arcade-cabinet"] .preference-select-menu {
+  border-width: 2px;
+  border-color: var(--arcade-rail);
+  box-shadow: var(--beads-shadow-panel);
+}
