@@ -19,9 +19,13 @@ Named runtime themes live in normal application CSS as overrides for the same `-
 ## Product Layout
 
 - The first screen should be the usable tool.
-- Upload, longest-edge pattern controls, processing status, and errors stay near the top or main workspace rail.
+- Upload, longest-edge pattern controls, and errors stay near the top or main workspace rail.
+- The left workspace toolbar is reserved for generation parameters: pattern size, color matching, smoothing, and max color count.
 - Language, theme, and interface style selectors stay near the upload and resolution controls.
+- MARD palette details open from the top action bar as a modal layer, not as homepage filler below the tool.
 - The pattern grid is the main workspace.
+- Manual pattern editing controls belong to the generated pattern grid area, not the left generation-parameter toolbar.
+- The empty upload workspace should adapt to remaining viewport height so the toolbar and upload canvas fill the first screen without leaving a large blank band below.
 - The compact color and bead-count summary sits below the original-image rail when a pattern is active.
 - The detailed color usage list follows the generated grid.
 - Avoid decorative layout that reduces the usable grid area.
@@ -51,10 +55,16 @@ Named runtime themes live in normal application CSS as overrides for the same `-
 - Use visible text or icon-plus-text controls for primary actions.
 - Longest-edge pattern presets should behave like a segmented control.
 - The longest-edge slider should be keyboard operable, bounded, and paired with precise stepper controls.
-- The resolved output dimensions should stay visible near the longest-edge control.
+- Color distance and dither modes should use compact segmented controls in the left toolbar.
+- The max color count control should be a bounded draggable slider with stepper controls, minimum `2`, maximum `64`, default `24`.
+- The smoothing control should be keyboard operable, bounded, and paired with precise stepper controls.
+- The resolved output dimensions should stay visible in generated pattern context, such as the grid header or summary.
 - Pattern zoom controls should use icon buttons and expose accessible labels.
+- Pattern editing controls should stay compact in the grid header, expose accessible labels, and show active tool state.
+- Paint, pick, erase, replace, undo, redo, reset, and active-color controls should not hide the first row, axes, zoom controls, or cell labels at the default fit view.
+- The active color selector and replace controls may list MARD colors, but they commit stable MARD codes and do not translate those codes.
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, should zoom only while the pointer is over the pattern grid.
-- Processing and error states must be visible without shifting the whole page.
+- Error states must be visible without shifting the whole page.
 - Unsupported file errors should be direct and recoverable.
 - Language, theme, and interface style controls should use source-defined allowlists.
 - Unsupported stored preferences should fall back without throwing.

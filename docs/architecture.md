@@ -1,18 +1,19 @@
 # Fundbeads Architecture
 
-Fundbeads is a single-page, client-only web application. It converts a user-selected JPG or PNG into a Perler Bead / Fuse Bead pattern inside the browser.
+Fundbeads is a single-page, client-only web application. It converts a user-selected JPG, PNG, or WebP into a Perler Bead / Fuse Bead pattern inside the browser.
 
 ## Runtime Boundary
 
 ```mermaid
 graph TD
-    UserFile["User JPG/PNG file"] --> Browser["Browser"]
+    UserFile["User JPG/PNG/WebP file"] --> Browser["Browser"]
     Browser --> ReactApp["React / Vite app"]
     ReactApp --> Canvas["Canvas sampling"]
     Canvas --> PatternLogic["Pattern utilities"]
     PatternLogic --> Palette["MARD 221 palette"]
-    PatternLogic --> Grid["Labeled pattern grid"]
-    PatternLogic --> Summary["Color usage summary"]
+    PatternLogic --> PatternEdit["Manual edit state"]
+    PatternEdit --> Grid["Labeled pattern grid"]
+    PatternEdit --> Summary["Color usage summary"]
     ReactApp --> Preferences["Optional localStorage preferences"]
     ReactApp --> LocalPatternStore["Optional IndexedDB pattern store"]
 ```
@@ -31,13 +32,14 @@ There is no backend service. The production Docker image serves static files wit
 
 ## Source-of-Truth Map
 
-- `frontend/src/App.tsx`: Single-page workflow, upload controls, longest-edge pattern controls, grid rendering, and summary rendering.
+- `frontend/src/App.tsx`: Single-page workflow, upload controls, longest-edge pattern controls, effective grid rendering, manual edit toolbar, and summary rendering.
 - `frontend/src/i18n.tsx`: Locale allowlist, static translation dictionaries, interface style labels, optional palette label overrides, and i18n provider.
 - `frontend/src/themes.tsx`: Theme allowlist, static theme ids, and theme preference provider.
 - `frontend/src/interface-style.tsx`: Interface style allowlist, static style ids, and interface style preference provider.
 - `frontend/src/browser-storage.ts`: Safe optional access to browser `localStorage`.
 - `frontend/src/local-pattern-db.ts`: Browser-local IndexedDB infrastructure for compact, validated pattern records.
 - `frontend/src/pattern.ts`: `PatternDimensions`, aspect-ratio dimension derivation, `Pattern`, `PatternCell`, `ColorUsage`, image sampling, RGB matching, readable text color, and count summaries.
+- `frontend/src/pattern-edit.ts`: Browser-session manual editing state, MARD-code overrides, effective pattern reconstruction, replace, reset, undo, and redo.
 - `frontend/src/palette.ts`: Stable exports for the active MARD palette contract.
 - `frontend/src/palettes/mard.ts`: Built-in static MARD 221 palette definition.
 - `frontend/src/styles.css`: Tailwind v4 semantic token mapping and named runtime theme overrides.
@@ -57,8 +59,11 @@ There is no backend service. The production Docker image serves static files wit
 6. Transparent pixels are composited against white.
 7. Each sampled RGB value is matched to the nearest MARD 221 palette entry by squared RGB Euclidean distance.
 8. Pattern cells are produced in row-major order with 1-based `x` and `y` coordinates.
-9. Usage counts are derived from the generated cells.
-10. React renders the grid and summary.
+9. The generated `Pattern` becomes the edit state's `basePattern`.
+10. Manual overrides are stored as row-major cell indexes mapped to MARD color codes.
+11. The app reconstructs an effective `Pattern` from the base cells plus overrides.
+12. Usage counts are derived from effective cells.
+13. React renders the effective grid and summary.
 
 Language, theme, and interface style preferences are independent of pattern processing. They are read from browser `localStorage` when available, validated against source-defined allowlists, and ignored if storage is blocked or contains unsupported values.
 
@@ -75,6 +80,9 @@ The local pattern persistence module is also independent of pattern generation. 
 - `Pattern.totalBeads` equals `Pattern.cells.length`.
 - For complete generated patterns, `Pattern.totalBeads` equals `width * height`.
 - `ColorUsage.count` is derived from pattern cells, never from formatted UI text.
+- Manual edit overrides store MARD color codes, not copied per-cell RGB objects.
+- Erasing a manual edit restores the generated base cell color and does not create empty/no-bead cells.
+- Reprocessing a source image creates a new base pattern and clears manual edit history.
 - Supported locales are `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
 - Supported theme ids are `classic`, `midnight`, `ocean`, `candy`, and `mono`.
 - Supported interface style ids are `modern` and `pixel`.

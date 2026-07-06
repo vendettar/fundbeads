@@ -293,3 +293,17 @@ select option {
 [data-ui-style="pixel"] .original-preview-image {
   image-rendering: pixelated;
 }
+
+@keyframes hover-shake {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-1deg) scale(1.02); }
+  75% { transform: rotate(1deg) scale(1.02); }
+}
+
+.hover-shake {
+  transition: transform 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+.hover-shake:hover {
+  animation: hover-shake 0.2s ease-in-out;
+}

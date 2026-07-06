@@ -3,13 +3,30 @@ import { describe, expect, it, vi } from "vitest";
 import { mardPalette, type BeadColor } from "../src/palette";
 import {
   cellsToPattern,
+  colorDistanceModes,
   colorDistance,
   compositeRgbOverWhite,
+  defaultColorDistanceMode,
+  defaultDitherMode,
+  defaultMaxColorCount,
+  defaultSmoothingLevel,
   dimensionsForAspectRatio,
+  ditherModes,
   imageFileToPattern,
+  labDeltaE76,
+  maxColorCountMax,
+  maxColorCountMin,
   nearestBeadColor,
+  normalizeColorDistanceMode,
+  normalizeDitherMode,
+  normalizeMaxColorCount,
+  normalizeSmoothingLevel,
+  patternPixelsToPattern,
   readableTextColor,
   summarizeCells,
+  toCieLab,
+  toOklab,
+  weightedColorDistance,
   type PatternDimensions,
   type PatternCell,
 } from "../src/pattern";
@@ -41,7 +58,7 @@ describe("pattern logic", () => {
       { code: "R1", label: "Right", r: 20, g: 0, b: 0 },
     ];
 
-    expect(nearestBeadColor({ r: 10, g: 0, b: 0 }, tiePalette)).toEqual(tiePalette[0]);
+    expect(nearestBeadColor({ r: 10, g: 0, b: 0 }, tiePalette, "rgb-fast")).toEqual(tiePalette[0]);
   });
 
   it("rejects empty palettes", () => {
@@ -50,6 +67,57 @@ describe("pattern logic", () => {
 
   it("uses squared RGB distance", () => {
     expect(colorDistance({ r: 10, g: 20, b: 30 }, { r: 13, g: 24, b: 42 })).toBe(169);
+  });
+
+  it("uses weighted RGB distance when requested", () => {
+    expect(weightedColorDistance({ r: 10, g: 20, b: 30 }, { r: 13, g: 24, b: 42 })).toBeCloseTo(27.98, 2);
+  });
+
+  it("exposes bounded color distance and dither controls with perceptual matching as the default", () => {
+    expect(colorDistanceModes).toEqual(["oklab", "rgb-fast", "weighted-rgb", "lab-delta-e"]);
+    expect(ditherModes).toEqual(["off", "floyd-steinberg", "ordered"]);
+    expect(defaultColorDistanceMode).toBe("oklab");
+    expect(defaultDitherMode).toBe("off");
+    expect(maxColorCountMin).toBe(2);
+    expect(maxColorCountMax).toBe(64);
+    expect(defaultMaxColorCount).toBe(24);
+    expect(defaultSmoothingLevel).toBe(0);
+    expect(normalizeColorDistanceMode("lab-delta-e")).toBe("lab-delta-e");
+    expect(normalizeColorDistanceMode("unknown")).toBe(defaultColorDistanceMode);
+    expect(normalizeDitherMode("floyd-steinberg")).toBe("floyd-steinberg");
+    expect(normalizeDitherMode("unknown")).toBe(defaultDitherMode);
+    expect(normalizeSmoothingLevel(-1)).toBe(0);
+    expect(normalizeSmoothingLevel(2.7)).toBe(3);
+    expect(normalizeSmoothingLevel(99)).toBe(3);
+    expect(normalizeMaxColorCount(0)).toBe(2);
+    expect(normalizeMaxColorCount(1)).toBe(2);
+    expect(normalizeMaxColorCount(24.6)).toBe(25);
+    expect(normalizeMaxColorCount(99)).toBe(64);
+  });
+
+  it("converts RGB to stable Oklab coordinates", () => {
+    const black = toOklab({ r: 0, g: 0, b: 0 });
+    const white = toOklab({ r: 255, g: 255, b: 255 });
+
+    expect(black).toEqual({ l: 0, a: 0, b: 0 });
+    expect(white.l).toBeCloseTo(1, 5);
+    expect(Math.abs(white.a)).toBeLessThan(0.0001);
+    expect(Math.abs(white.b)).toBeLessThan(0.0001);
+  });
+
+  it("converts RGB to stable CIE Lab coordinates and Delta-E 76 distances", () => {
+    const black = toCieLab({ r: 0, g: 0, b: 0 });
+    const white = toCieLab({ r: 255, g: 255, b: 255 });
+    const red = toCieLab({ r: 255, g: 0, b: 0 });
+
+    expect(black).toEqual({ l: 0, a: 0, b: 0 });
+    expect(white.l).toBeCloseTo(100, 4);
+    expect(Math.abs(white.a)).toBeLessThan(0.001);
+    expect(Math.abs(white.b)).toBeLessThan(0.001);
+    expect(red.l).toBeCloseTo(53.24, 2);
+    expect(red.a).toBeCloseTo(80.09, 2);
+    expect(red.b).toBeCloseTo(67.2, 2);
+    expect(labDeltaE76(black, white)).toBeCloseTo(100, 3);
   });
 
   it.each([
@@ -124,13 +192,16 @@ describe("pattern logic", () => {
   });
 
   it.each([
+    [{ width: 3840, height: 2160 }, 52, { width: 52, height: 29 }],
+    [{ width: 3840, height: 2160 }, 64, { width: 64, height: 36 }],
     [{ width: 3840, height: 2160 }, 80, { width: 80, height: 45 }],
+    [{ width: 2160, height: 3840 }, 64, { width: 36, height: 64 }],
     [{ width: 2160, height: 3840 }, 80, { width: 45, height: 80 }],
     [{ width: 3000, height: 3000 }, 80, { width: 80, height: 80 }],
     [{ width: 1600, height: 1000 }, 80, { width: 80, height: 50 }],
     [{ width: 1000, height: 1600 }, 80, { width: 50, height: 80 }],
-    [{ width: 9000, height: 1000 }, 100, { width: 100, height: 40 }],
-    [{ width: 1000, height: 9000 }, 100, { width: 40, height: 100 }],
+    [{ width: 9000, height: 1000 }, 100, { width: 100, height: 11 }],
+    [{ width: 1000, height: 9000 }, 100, { width: 11, height: 100 }],
     [{ width: Number.NaN, height: 1000 }, 80, { width: 80, height: 80 }],
   ] as const)("derives pattern dimensions for source %o and longest edge %s", (source, longestEdge, expected) => {
     expect(dimensionsForAspectRatio(source, longestEdge)).toEqual(expected);
@@ -162,6 +233,83 @@ describe("pattern logic", () => {
     expect(pattern.cells).toHaveLength(dimensions.width * dimensions.height);
     expect(usageTotal).toBe(pattern.totalBeads);
     expect(pattern.usage).toEqual([{ color: palette[0], count: dimensions.width * dimensions.height }]);
+  });
+
+  it("limits the final pattern to the most-used colors and remaps cells to the retained palette", () => {
+    const limitPalette = Array.from({ length: 13 }, (_, index) => {
+      const channel = index * 20;
+      return { code: `A${String(index).padStart(2, "0")}`, label: `Color ${index}`, r: channel, g: channel, b: channel };
+    });
+    const sourcePixels = limitPalette.flatMap((color, index) => {
+      const count = index === 0 ? 1_000 : 50;
+      return Array.from({ length: count }, () => ({ r: color.r, g: color.g, b: color.b }));
+    });
+
+    const pattern = patternPixelsToPattern(sourcePixels, { width: 40, height: 40 }, limitPalette, {
+      colorDistanceMode: "rgb-fast",
+      maxColorCount: 12,
+    });
+
+    expect(pattern.cells).toHaveLength(1_600);
+    expect(pattern.usage).toHaveLength(12);
+    expect(pattern.usage.map(({ color }) => color.code)).not.toContain("A12");
+    expect(new Set(pattern.cells.map((cell) => cell.color.code)).size).toBe(12);
+  });
+
+  it("preserves cells already matched to retained colors when max color limiting remaps dropped colors", () => {
+    const limitPalette: BeadColor[] = [
+      { code: "A1", label: "Tie winner", r: 0, g: 0, b: 0 },
+      { code: "B1", label: "Dominant retained", r: 20, g: 0, b: 0 },
+      { code: "C1", label: "Dropped", r: 200, g: 0, b: 0 },
+    ];
+    const tiedToA = { r: 10, g: 0, b: 0 };
+    const sourcePixels = [
+      ...Array.from({ length: 600 }, () => tiedToA),
+      ...Array.from({ length: 700 }, () => ({ r: 20, g: 0, b: 0 })),
+      ...Array.from({ length: 300 }, () => ({ r: 200, g: 0, b: 0 })),
+    ];
+
+    const pattern = patternPixelsToPattern(sourcePixels, { width: 40, height: 40 }, limitPalette, {
+      colorDistanceMode: "rgb-fast",
+      maxColorCount: 2,
+    });
+
+    expect(pattern.usage.map(({ color }) => color.code)).toEqual(["B1", "A1"]);
+    expect(pattern.cells.slice(0, 600).every((cell) => cell.color.code === "A1")).toBe(true);
+  });
+
+  it("keeps Floyd-Steinberg dithering deterministic without changing pattern coordinates", () => {
+    const sourcePixels = Array.from({ length: 1_600 }, (_, index) => {
+      const channel = Math.round((index / 1_599) * 255);
+      return { r: channel, g: channel, b: channel };
+    });
+
+    const pattern = patternPixelsToPattern(sourcePixels, { width: 40, height: 40 }, palette, {
+      colorDistanceMode: "rgb-fast",
+      ditherMode: "floyd-steinberg",
+    });
+
+    expect(pattern.width).toBe(40);
+    expect(pattern.height).toBe(40);
+    expect(pattern.totalBeads).toBe(1_600);
+    expect(pattern.cells.slice(0, 42).map(({ x, y }) => `${x},${y}`).slice(0, 3)).toEqual(["1,1", "2,1", "3,1"]);
+    expect(pattern.cells[40]).toMatchObject({ x: 1, y: 2 });
+    expect(pattern.usage.reduce((total, item) => total + item.count, 0)).toBe(1_600);
+  });
+
+  it("uses ordered dithering as a deterministic threshold matrix", () => {
+    const blackWhitePalette: BeadColor[] = [
+      { code: "B1", label: "Black", r: 0, g: 0, b: 0 },
+      { code: "A1", label: "White", r: 255, g: 255, b: 255 },
+    ];
+    const sourcePixels = Array.from({ length: 1_600 }, () => ({ r: 127, g: 127, b: 127 }));
+
+    const pattern = patternPixelsToPattern(sourcePixels, { width: 40, height: 40 }, blackWhitePalette, {
+      colorDistanceMode: "rgb-fast",
+      ditherMode: "ordered",
+    });
+
+    expect(Object.fromEntries(pattern.usage.map(({ color, count }) => [color.code, count]))).toEqual({ A1: 800, B1: 800 });
   });
 
   it("samples rectangular image data using width-based row-major offsets", async () => {
@@ -204,7 +352,12 @@ describe("pattern logic", () => {
 
     try {
       const onSourceImageSize = vi.fn();
-      const pattern = await imageFileToPattern({ type: "image/png" } as File, height, onSourceImageSize);
+      const pattern = await imageFileToPattern({ type: "image/png" } as File, height, onSourceImageSize, {
+        colorDistanceMode: "rgb-fast",
+        ditherMode: "off",
+        smoothingLevel: 0,
+        maxColorCount: maxColorCountMax,
+      });
 
       expect(onSourceImageSize).toHaveBeenCalledWith({ width, height });
       expect(canvas.width).toBe(width);
@@ -216,6 +369,55 @@ describe("pattern logic", () => {
         sampledPositions.map(({ x, y, color }) => `${x},${y}:${color.code}`),
       );
       expect(pattern.totalBeads).toBe(width * height);
+      expect(bitmap.close).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("preserves a 16:9 source ratio when the derived short edge is below the minimum longest-edge control size", async () => {
+    const sourceWidth = 1600;
+    const sourceHeight = 900;
+    const patternWidth = 64;
+    const patternHeight = 36;
+    const pixels = new Uint8ClampedArray(patternWidth * patternHeight * 4);
+    pixels.fill(255);
+    const bitmap = { width: sourceWidth, height: sourceHeight, close: vi.fn() };
+    const context = {
+      imageSmoothingEnabled: false,
+      imageSmoothingQuality: "low",
+      filter: "none",
+      clearRect: vi.fn(),
+      drawImage: vi.fn(),
+      getImageData: vi.fn(() => ({ data: pixels })),
+    };
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => context),
+    };
+
+    vi.stubGlobal("createImageBitmap", vi.fn(async () => bitmap));
+    vi.stubGlobal("document", {
+      createElement: vi.fn(() => canvas),
+    });
+
+    try {
+      const pattern = await imageFileToPattern({ type: "image/png" } as File, patternWidth, undefined, {
+        colorDistanceMode: "rgb-fast",
+        ditherMode: "off",
+        smoothingLevel: 0,
+        maxColorCount: maxColorCountMax,
+      });
+
+      expect(canvas.width).toBe(patternWidth);
+      expect(canvas.height).toBe(patternHeight);
+      expect(context.drawImage).toHaveBeenCalledWith(bitmap, 0, 0, patternWidth, patternHeight);
+      expect(context.getImageData).toHaveBeenCalledWith(0, 0, patternWidth, patternHeight);
+      expect(pattern.width).toBe(patternWidth);
+      expect(pattern.height).toBe(patternHeight);
+      expect(pattern.totalBeads).toBe(patternWidth * patternHeight);
+      expect(pattern.cells).toHaveLength(patternWidth * patternHeight);
       expect(bitmap.close).toHaveBeenCalledTimes(1);
     } finally {
       vi.unstubAllGlobals();

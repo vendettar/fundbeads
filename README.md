@@ -1,6 +1,6 @@
 # Fundbeads
 
-Fundbeads is a client-side Perler Bead / Fuse Bead pattern maker. It turns a local JPG or PNG into a labeled, counted bead grid using the built-in MARD 221 palette.
+Fundbeads is a client-side Perler Bead / Fuse Bead pattern maker. It turns a local JPG, PNG, or WebP into a labeled, counted bead grid using the built-in MARD 221 palette.
 
 ## Installation
 
@@ -25,7 +25,7 @@ Open the Vite URL shown in the terminal. By default it is:
 http://localhost:5173
 ```
 
-Upload a JPG or PNG, choose a longest-edge preset such as `52`, `64`, or `78`, or adjust the longest edge from `40` to `100`; the app will preserve the image ratio and generate the pattern locally in the browser.
+Upload a JPG, PNG, or WebP, choose a longest-edge preset such as `52`, `64`, or `78`, or adjust the longest edge from `40` to `100`; the app will preserve the image ratio and generate the pattern locally in the browser.
 
 ## What Fundbeads Does
 
@@ -33,7 +33,7 @@ Fundbeads converts an uploaded image into a bead-placement chart. Each generated
 
 The current app includes:
 
-- Local JPG/PNG upload.
+- Local JPG/PNG/WebP upload.
 - Longest-edge presets: `52`, `64`, and `78`, with an adjustable longest edge from `40` to `100`.
 - Aspect-ratio preserving output dimensions, such as `80x45` for a `16:9` image with longest edge `80`.
 - Browser-local image decoding and canvas sampling.
@@ -43,7 +43,8 @@ The current app includes:
 - Stronger helper lines every 5 and 10 cells.
 - Default fit-to-screen pattern viewing with zoom in/out controls.
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, to zoom while the pointer is over the pattern grid.
-- Color usage summary with swatch, MARD code, label, count, grid size, color count, and total bead count.
+- Post-generation grid editing with paint, pick, erase, replace color, undo, redo, and reset controls.
+- Color usage summary with swatch, MARD code, count, percent, grid size, color count, and total bead count.
 - UI language selector for `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
 - Theme selector for Classic, Midnight, Ocean, Candy, and Mono themes.
 - Interface style selector for Modern and Pixel UI modes.
@@ -60,6 +61,7 @@ The Docker image serves static files only.
 
 - `frontend/`: Vite React application.
 - `frontend/src/pattern.ts`: Image sampling, color matching, pattern contracts, and count summaries.
+- `frontend/src/pattern-edit.ts`: Browser-session pattern editing, effective pattern reconstruction, and edit history.
 - `frontend/src/palette.ts`: Stable exports for the active MARD palette contract.
 - `frontend/src/palettes/mard.ts`: Built-in static MARD 221 palette data.
 - `frontend/src/i18n.tsx`: Supported locales, translations, optional palette label overrides, and i18n provider.

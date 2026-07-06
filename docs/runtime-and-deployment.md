@@ -5,7 +5,7 @@ Fundbeads is built as static frontend assets. There is no backend service and no
 ## Runtime Boundary Model
 
 - **Browser app**: React/Vite code runs in the user's browser.
-- **Image processing**: JPG/PNG decoding, canvas sampling, palette matching, and counting happen locally in the browser.
+- **Image processing**: JPG/PNG/WebP decoding, canvas sampling, palette matching, and counting happen locally in the browser.
 - **Preferences**: Language, theme, and interface style preferences use browser `localStorage` only when available.
 - **Local pattern persistence**: IndexedDB infrastructure can store compact, validated pattern records in the user's browser when explicitly called.
 - **Static assets**: Production builds produce `frontend/dist`.

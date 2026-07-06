@@ -4,13 +4,16 @@ This file lists the current shipped feature surface. Planned items are not imple
 
 ## Current
 
-- Local JPG/PNG upload through the browser file input.
+- Local JPG/PNG/WebP upload through the browser file input.
 - Browser-local image decoding, canvas sampling, palette matching, and counting.
 - Longest-edge presets: `52`, `64`, and `78`, with an adjustable longest edge from `40` to `100`.
 - Aspect-ratio preserving output dimensions, such as `80x45` for a `16:9` image with longest edge `80`.
 - Built-in static MARD 221 palette.
-- Nearest-color matching by squared RGB Euclidean distance.
-- Transparent PNG pixels composited against white before matching.
+- Color-distance algorithms: Perceptual Oklab default, Fast RGB, Weighted RGB, and Lab Delta-E 76.
+- Dither modes: Off default, Floyd-Steinberg, and Ordered.
+- Smoothing level control from `0` to `3`.
+- Max color count control: bounded draggable slider with stepper controls, minimum `2`, maximum `64`, default `24`.
+- Transparent PNG/WebP pixels composited against white before matching.
 - Labeled pattern grid with one visible cell per bead.
 - MARD code shown inside every bead cell.
 - Top, bottom, left, and right numbered axes.
@@ -18,7 +21,8 @@ This file lists the current shipped feature surface. Planned items are not imple
 - Default fit-to-screen grid view.
 - Zoom in/out controls for inspecting dense grids.
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, to zoom while the pointer is over the pattern grid.
-- Color usage summary with swatch, MARD code, label, count, used color count, grid size, and total bead count.
+- Post-generation grid editing: paint with a MARD 221 color, pick a cell color, erase manual edits, replace one effective color with another, undo, redo, and reset.
+- Color usage summary with swatch, MARD code, count, percent, used color count, grid size, and total bead count.
 - UI language selector for English, Simplified Chinese, Traditional Chinese, Japanese, Korean, and Spanish.
 - Localized UI copy with stable MARD code labels and optional palette label overrides.
 - Theme selector with Classic, Midnight, Ocean, Candy, and Mono themes.
@@ -28,8 +32,10 @@ This file lists the current shipped feature surface. Planned items are not imple
 
 ## Current Limitations
 
-- Palette matching uses the built-in MARD 221 RGB dataset.
+- Palette matching uses the built-in MARD 221 RGB dataset with local distance and dither modes; it does not use remote palette services.
+- Dithered modes can create speckled charts and may increase bead-picking complexity.
 - Output dimensions are derived from the source image ratio and selected longest edge. Fixed-size crop/drag framing is not implemented yet.
+- Manual edits are browser-session state only; history/draft/library UI and edit persistence are not implemented.
 - Printable export is not implemented.
 - Palette filtering is not implemented.
 - Very small screens may need zooming to read individual bead codes.

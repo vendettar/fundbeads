@@ -73,7 +73,7 @@ type LocalPatternSourceImage = {
   id: string;
   patternId: string;
   fileName: string;
-  mimeType: "image/jpeg" | "image/png";
+  mimeType: "image/jpeg" | "image/png" | "image/webp";
   sizeBytes: number;
   createdAt: number;
   blob: Blob;
