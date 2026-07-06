@@ -1,6 +1,6 @@
 # Fundbeads
 
-Fundbeads is a client-side Perler Bead / Fuse Bead pattern maker. It turns a local JPG or PNG into a labeled, counted bead grid using a mock MARD palette.
+Fundbeads is a client-side Perler Bead / Fuse Bead pattern maker. It turns a local JPG or PNG into a labeled, counted bead grid using the built-in MARD 221 palette.
 
 ## Installation
 
@@ -25,18 +25,19 @@ Open the Vite URL shown in the terminal. By default it is:
 http://localhost:5173
 ```
 
-Upload a JPG or PNG, choose `52x52`, `64x64`, or `78x78`, and the app will generate the pattern locally in the browser.
+Upload a JPG or PNG, choose a longest-edge preset such as `52`, `64`, or `78`, or adjust the longest edge from `40` to `100`; the app will preserve the image ratio and generate the pattern locally in the browser.
 
 ## What Fundbeads Does
 
-Fundbeads converts an uploaded image into a bead-placement chart. Each generated cell represents one bead, uses the nearest mock MARD palette color, and displays the MARD code inside the cell.
+Fundbeads converts an uploaded image into a bead-placement chart. Each generated cell represents one bead, uses the nearest MARD 221 palette color, and displays the MARD code inside the cell.
 
 The current app includes:
 
 - Local JPG/PNG upload.
-- Output grid sizes: `52x52`, `64x64`, and `78x78`.
+- Longest-edge presets: `52`, `64`, and `78`, with an adjustable longest edge from `40` to `100`.
+- Aspect-ratio preserving output dimensions, such as `80x45` for a `16:9` image with longest edge `80`.
 - Browser-local image decoding and canvas sampling.
-- A hardcoded 28-color mock MARD palette.
+- A built-in static MARD 221 palette.
 - RGB Euclidean nearest-color matching.
 - A high-contrast grid with top, bottom, left, and right axes.
 - Stronger helper lines every 5 and 10 cells.
@@ -45,12 +46,13 @@ The current app includes:
 - Color usage summary with swatch, MARD code, label, count, grid size, color count, and total bead count.
 - UI language selector for `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
 - Theme selector for Classic, Midnight, Ocean, Candy, and Mono themes.
+- Interface style selector for Modern and Pixel UI modes.
 
 ## Local-Only Safety Model
 
-Uploaded images are processed in the browser. The project does not include a backend, database, API server, image upload endpoint, telemetry sink, or third-party image-processing service.
+Uploaded images are processed in the browser. The project does not include a backend, server-side database, API server, image upload endpoint, telemetry sink, or third-party image-processing service.
 
-Language and theme preferences are stored only in browser `localStorage` when available. The app continues to run if preference storage is blocked.
+Language, theme, and interface style preferences are stored only in browser `localStorage` when available. The app continues to run if preference storage is blocked.
 
 The Docker image serves static files only.
 
@@ -58,9 +60,11 @@ The Docker image serves static files only.
 
 - `frontend/`: Vite React application.
 - `frontend/src/pattern.ts`: Image sampling, color matching, pattern contracts, and count summaries.
-- `frontend/src/palette.ts`: Current mock MARD palette subset.
-- `frontend/src/i18n.tsx`: Supported locales, translations, localized palette labels, and i18n provider.
+- `frontend/src/palette.ts`: Stable exports for the active MARD palette contract.
+- `frontend/src/palettes/mard.ts`: Built-in static MARD 221 palette data.
+- `frontend/src/i18n.tsx`: Supported locales, translations, optional palette label overrides, and i18n provider.
 - `frontend/src/themes.tsx`: Supported theme ids, preference handling, and theme provider.
+- `frontend/src/interface-style.tsx`: Supported interface style ids, preference handling, and interface style provider.
 - `frontend/src/browser-storage.ts`: Safe optional access to browser preference storage.
 - `scripts/generate-design-theme.mjs`: Generates CSS variables from `DESIGN.md`.
 - `docs/`: Engineering docs, architecture, design rules, runtime notes, and decisions.
@@ -114,7 +118,6 @@ Key docs:
 
 Planned items are not current features:
 
-- Replace the mock palette with a verified full MARD 221-color dataset.
 - Add client-side printable pattern export.
 - Add optional palette filtering.
 - Improve mobile grid navigation.

@@ -6,17 +6,19 @@ This document owns the Fundbeads pattern-processing contract.
 
 1. The user uploads a JPG or PNG through the browser file input.
 2. The file is decoded with `createImageBitmap`.
-3. A square canvas is created at the selected grid size: `52`, `64`, or `78`.
-4. The decoded image is drawn into that square canvas.
-5. `getImageData` reads one RGBA sample per output bead cell.
-6. Alpha is composited against white:
+3. The selected longest edge is normalized to an integer from `40` to `100`.
+4. Pattern dimensions are derived from the decoded image aspect ratio. For example, a `16:9` source with longest edge `80` generates `80x45`.
+5. A canvas is created at the derived pattern dimensions.
+6. The full decoded image is drawn into that canvas without cropping. Because the target dimensions match the source ratio, the image is not squeezed non-proportionally.
+7. `getImageData` reads one RGBA sample per output bead cell.
+8. Alpha is composited against white:
    - `sample = source * alpha + 255 * (1 - alpha)`
-7. The resulting RGB sample is matched to the nearest mock MARD color.
-8. The app returns `Pattern` data and renders the grid plus color usage summary.
+9. The resulting RGB sample is matched to the nearest MARD 221 color.
+10. The app returns `Pattern` data and renders the grid plus color usage summary.
 
 ## Palette Contract
 
-The active palette is a hardcoded mock MARD subset in `frontend/src/palette.ts`.
+The active palette is the built-in static MARD 221 dataset exposed through `frontend/src/palette.ts`.
 
 Each color must include:
 
@@ -28,7 +30,7 @@ Each color must include:
 | `g` | `number` | Integer green channel, `0..255`. |
 | `b` | `number` | Integer blue channel, `0..255`. |
 
-The current palette is not the full MARD 221-color dataset. Full palette replacement is tracked in [agent/instructions/future/001-full-mard-221-palette.md](../agent/instructions/future/001-full-mard-221-palette.md).
+`frontend/src/palettes/mard.ts` owns the extensible static palette definition. `mard221Palette.slug` is `mard-221`; future MARD editions should use the same schema with a distinct slug such as `mard-288`.
 
 ## Matching Algorithm
 
@@ -46,26 +48,28 @@ When two colors have the same distance, current behavior keeps the first matchin
 
 Current TypeScript contracts live in `frontend/src/pattern.ts`.
 
-- `GridSize`: `52 | 64 | 78`
+- `PatternDimensions`: integer `width` and `height`, each clamped to `40..100`
+- `patternLongestEdgePresets`: `52`, `64`, and `78`
+- `dimensionsForAspectRatio`: derives `PatternDimensions` from source image size and selected longest edge
 - `PatternCell`: 1-based `x`, 1-based `y`, and matched `BeadColor`
 - `ColorUsage`: `BeadColor` plus exact `count`
-- `Pattern`: selected `size`, row-major `cells`, sorted `usage`, and `totalBeads`
+- `Pattern`: selected `width`, selected `height`, row-major `cells`, sorted `usage`, and `totalBeads`
 
 ## Counting
 
 Every output cell maps to exactly one bead.
 
 - `totalBeads = cells.length`
-- For complete generated patterns, `totalBeads = size * size`
+- For complete generated patterns, `totalBeads = width * height`
 - Summary rows are sorted by count descending, then by MARD code for stable ties.
 - Summary counts are derived from cells, not from rendered UI text.
 
 ## Known Limitations
 
-- The source image is currently stretched into a square canvas. There is no crop, fit, or aspect-ratio positioning control yet.
-- The palette is a mock subset.
+- Fixed-size crop, zoom, or drag-to-frame controls are not implemented yet.
+- Palette label overrides are optional; stable fallback labels use `MARD {code}`.
 - There is no printable export yet.
-- Large source image decoding depends on browser capabilities. The output grid itself is bounded to at most `78x78`.
+- Large source image decoding depends on browser capabilities. The output grid itself is bounded to at most `100x100`.
 
 ## Verification
 

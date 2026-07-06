@@ -12,7 +12,7 @@ This document records durable product, architecture, runtime, and design decisio
 
 - Uploaded images must not leave the browser.
 - Docker serves static assets only.
-- No database, API server, or upload service is part of the current architecture.
+- No server-side database, API server, or upload service is part of the current architecture.
 
 ## 2. Vite, React, TypeScript, and Tailwind CSS v4
 
@@ -39,17 +39,18 @@ This document records durable product, architecture, runtime, and design decisio
 - Named runtime themes override the generated `--beads-*` variables in application CSS.
 - Broad verification should include `pnpm design:generate`.
 
-## 4. Mock MARD Palette First
+## 4. Built-In MARD 221 Palette
 
-**Decision**: The MVP uses a hardcoded mock MARD palette subset with 28 colors.
+**Decision**: Fundbeads uses `mard-221` as the active built-in static MARD palette.
 
-**Rationale**: The processing pipeline can be built and tested before the full 221-color dataset is sourced and verified.
+**Rationale**: Pattern generation needs a complete, deterministic bead palette contract. Keeping MARD 221 as bundled static data preserves local-only processing and avoids runtime dependency on remote palette services.
 
 **Implications**:
 
-- Current docs must describe the palette as mock.
-- Full 221-color support requires source traceability, data validation, tests, and a decision-log update.
+- `mard-221` is the canonical active palette slug.
 - Palette `code` is the stable identity; `label` is display copy.
+- Future MARD editions, such as `mard-288`, must use the same static palette schema with a distinct slug and validation tests.
+- Runtime code, docs, and tests should not describe the active palette as mock.
 
 ## 5. RGB Euclidean Matching
 
@@ -82,7 +83,7 @@ This document records durable product, architecture, runtime, and design decisio
 
 **Implications**:
 
-- 78x78 rendering performance must be watched.
+- `100x100` rendering performance must be watched.
 - Grid cells must remain stable and scrollable.
 - A future canvas/SVG export can be added without replacing the interactive grid unless a later decision approves it.
 
@@ -126,3 +127,19 @@ This document records durable product, architecture, runtime, and design decisio
 - Preference reads and writes must tolerate blocked storage.
 - MARD color codes remain stable and untranslated; localized palette labels are display-only.
 - New locales or themes require dictionary/label coverage tests and documentation updates.
+
+## 11. Browser-Local IndexedDB Pattern Store
+
+**Decision**: Fundbeads includes IndexedDB infrastructure for compact, browser-local pattern records.
+
+**Rationale**: Upcoming recent-history, draft restore, offline library, export cache, and account-sync flows need a durable browser-local foundation. Keeping the first layer in IndexedDB preserves the static deployment model and avoids introducing a backend before account features are explicitly designed.
+
+**Implications**:
+
+- `fundbeads-pattern-store` is a browser-local UX/cache layer, not account authority.
+- Persisted records store `width`, `height`, `paletteSlug`, `paletteVersion`, row-major MARD `cellCodes`, usage counts, total beads, timestamps, and local-only sync metadata.
+- Records are validated against the active `mard-221` palette before reconstruction.
+- Source images are not automatically persisted. Any source-image blob storage must be explicit, bounded, and covered by a future instruction.
+- Object URLs must never be persisted.
+- The static runtime still has no API routes, upload endpoint, server-side database, telemetry, or account sync.
+- Future login/sync work must treat IndexedDB records as client-provided data and validate server-side ownership independently.

@@ -6,8 +6,9 @@ This file lists the current shipped feature surface. Planned items are not imple
 
 - Local JPG/PNG upload through the browser file input.
 - Browser-local image decoding, canvas sampling, palette matching, and counting.
-- Output sizes: `52x52`, `64x64`, and `78x78`.
-- Mock MARD palette with 28 labeled colors.
+- Longest-edge presets: `52`, `64`, and `78`, with an adjustable longest edge from `40` to `100`.
+- Aspect-ratio preserving output dimensions, such as `80x45` for a `16:9` image with longest edge `80`.
+- Built-in static MARD 221 palette.
 - Nearest-color matching by squared RGB Euclidean distance.
 - Transparent PNG pixels composited against white before matching.
 - Labeled pattern grid with one visible cell per bead.
@@ -19,15 +20,16 @@ This file lists the current shipped feature surface. Planned items are not imple
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, to zoom while the pointer is over the pattern grid.
 - Color usage summary with swatch, MARD code, label, count, used color count, grid size, and total bead count.
 - UI language selector for English, Simplified Chinese, Traditional Chinese, Japanese, Korean, and Spanish.
-- Localized UI copy and display-only palette labels for the current mock palette.
+- Localized UI copy with stable MARD code labels and optional palette label overrides.
 - Theme selector with Classic, Midnight, Ocean, Candy, and Mono themes.
-- Language and theme preferences stored only in browser `localStorage` when available.
+- Interface style selector with Modern and Pixel UI modes.
+- Language, theme, and interface style preferences stored only in browser `localStorage` when available.
 - Static build and nginx Docker runtime.
 
 ## Current Limitations
 
-- The palette is a mock subset, not the full MARD 221-color dataset.
-- The source image is stretched into a square grid. Crop/fit controls are not implemented.
+- Palette matching uses the built-in MARD 221 RGB dataset.
+- Output dimensions are derived from the source image ratio and selected longest edge. Fixed-size crop/drag framing is not implemented yet.
 - Printable export is not implemented.
 - Palette filtering is not implemented.
 - Very small screens may need zooming to read individual bead codes.
@@ -35,7 +37,6 @@ This file lists the current shipped feature surface. Planned items are not imple
 
 ## Planned
 
-- Verified full MARD 221-color palette.
 - Client-side printable pattern export.
 - Optional palette filtering.
 - Better mobile grid navigation and touch zoom gestures.

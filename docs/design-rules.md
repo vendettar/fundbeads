@@ -14,15 +14,16 @@ When changing theme tokens:
 
 Do not edit `frontend/src/design-theme.generated.css` directly.
 
-Named runtime themes live in normal application CSS as overrides for the same `--beads-*` variables. They must not require remote CSS, remote assets, or changes to the generated file.
+Named runtime themes live in normal application CSS as overrides for the same `--beads-*` variables. Interface style modes live in normal application CSS scoped under `data-ui-style`. They must not require remote CSS, remote assets, or changes to the generated file.
 
 ## Product Layout
 
 - The first screen should be the usable tool.
-- Upload, resolution selection, processing status, and errors stay near the top.
-- Language and theme selectors stay near the upload and resolution controls.
+- Upload, longest-edge pattern controls, processing status, and errors stay near the top or main workspace rail.
+- Language, theme, and interface style selectors stay near the upload and resolution controls.
 - The pattern grid is the main workspace.
-- The color summary follows the generated grid.
+- The compact color and bead-count summary sits below the original-image rail when a pattern is active.
+- The detailed color usage list follows the generated grid.
 - Avoid decorative layout that reduces the usable grid area.
 
 ## Grid Rules
@@ -32,7 +33,8 @@ Named runtime themes live in normal application CSS as overrides for the same `-
 - Cell text is the MARD code.
 - Cell dimensions must stay stable.
 - Top, bottom, left, and right axes must be visible.
-- Axis labels run from `1` through the selected grid size.
+- Top and bottom axis labels run from `1` through selected width.
+- Left and right axis labels run from `1` through selected height.
 - Every 5th or 10th grid line should be stronger than a normal grid line.
 - Generated grids should default to a fit-to-screen view so the full chart is visible without grid scrollbars.
 - Users can zoom in for detail. Once zoomed beyond the fit size, internal grid scrolling is acceptable.
@@ -47,12 +49,14 @@ Named runtime themes live in normal application CSS as overrides for the same `-
 ## Controls
 
 - Use visible text or icon-plus-text controls for primary actions.
-- Resolution selection should behave like a segmented control.
+- Longest-edge pattern presets should behave like a segmented control.
+- The longest-edge slider should be keyboard operable, bounded, and paired with precise stepper controls.
+- The resolved output dimensions should stay visible near the longest-edge control.
 - Pattern zoom controls should use icon buttons and expose accessible labels.
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, should zoom only while the pointer is over the pattern grid.
 - Processing and error states must be visible without shifting the whole page.
 - Unsupported file errors should be direct and recoverable.
-- Language and theme controls should use source-defined allowlists.
+- Language, theme, and interface style controls should use source-defined allowlists.
 - Unsupported stored preferences should fall back without throwing.
 
 ## Internationalization
@@ -69,7 +73,7 @@ Named runtime themes live in normal application CSS as overrides for the same `-
 - Use semantic Tailwind tokens from `frontend/src/styles.css`, such as `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, and `bg-primary`.
 - Use `font-mono` for bead codes, coordinates, and counts.
 - Keep arbitrary one-off colors out of JSX unless the color is actual bead data from the palette.
-- Runtime theme overrides must preserve contrast for form controls, axes, summary text, and error states.
+- Runtime theme and interface style overrides must preserve contrast for form controls, axes, summary text, and error states.
 
 ## Accessibility
 

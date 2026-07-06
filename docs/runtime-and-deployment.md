@@ -6,7 +6,8 @@ Fundbeads is built as static frontend assets. There is no backend service and no
 
 - **Browser app**: React/Vite code runs in the user's browser.
 - **Image processing**: JPG/PNG decoding, canvas sampling, palette matching, and counting happen locally in the browser.
-- **Preferences**: Language and theme preferences use browser `localStorage` only when available.
+- **Preferences**: Language, theme, and interface style preferences use browser `localStorage` only when available.
+- **Local pattern persistence**: IndexedDB infrastructure can store compact, validated pattern records in the user's browser when explicitly called.
 - **Static assets**: Production builds produce `frontend/dist`.
 - **Docker runtime**: nginx serves the compiled static files.
 - **Mutable server state**: None.
@@ -82,10 +83,13 @@ http://localhost:3000
 - The runtime container is static-only.
 - There are no API routes.
 - There is no image upload endpoint.
-- There is no database or server-side persistence.
-- Uploaded images, generated patterns, and bead counts remain in browser memory unless a future client-side export feature is added.
-- Language and theme preference keys are optional browser-local state only.
-- Translations, theme ids, and display labels are bundled static source data.
+- There is no server-side database or server-side persistence.
+- Normal generation keeps uploaded images, generated patterns, and bead counts in browser memory.
+- The local pattern persistence module stores compact records in browser IndexedDB only when explicitly called by current or future UI flows.
+- Local pattern records store row-major MARD codes and usage counts; they do not store object URLs or automatically persist uploaded source images.
+- IndexedDB records are local to the user's browser. They are not account authority and are not synchronized to a server by the static runtime.
+- Language, theme, and interface style preference keys are optional browser-local state only.
+- Translations, theme ids, interface style ids, and display labels are bundled static source data.
 - There is no remote translation, remote theme, telemetry, CDN, or analytics dependency.
 
 ## Verification
