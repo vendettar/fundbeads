@@ -25,9 +25,9 @@ You are not a premature optimizer. Focus on hot paths, shared foundations, large
 - Background work must be cancellable, coalesced, or latest-wins when user actions can make results stale.
 - Watch for leaks from object URLs, image bitmaps, listeners, timers, subscriptions, retained blobs, and stale closures.
 - Large source images should be downsampled before pattern generation; avoid keeping unnecessary full-resolution pixel buffers after processing.
-- DOM grid rendering at `78x78` must remain usable with fit-to-screen defaults and bounded zoom behavior.
-- The current maximum generated pattern is 6,084 cells for `78x78`, plus axes and summary rows. Use that as the baseline render budget.
-- Palette matching cost is `grid cells * palette size`. Mock palette matching is cheap; full 221-color matching needs a renewed cost check.
+- DOM grid rendering at `100x100` must remain usable with fit-to-screen defaults and bounded zoom behavior.
+- The current maximum generated pattern is 10,000 cells for `100x100`, plus axes and summary rows. Use that as the baseline render budget.
+- Palette matching cost is `grid cells * palette size`; use the active 221-color MARD palette when estimating worst-case CPU work.
 - Keep derived data and layout measurements out of hot render loops unless they are memoized or bounded by the pattern contract.
 
 ## Reject

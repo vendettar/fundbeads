@@ -2,10 +2,14 @@
 
 These instructions are backlog candidates. They are not approved implementation scope until a user explicitly selects one.
 
+## Implemented Items
+
+- [001 MARD 221 Palette](001-full-mard-221-palette.md)
+
 ## Backlog Items
 
-- [001 Full MARD 221 Palette](001-full-mard-221-palette.md)
 - [002 Printable Pattern Export](002-printable-pattern-export.md)
+- [003 Fixed-Dimension Crop Viewport](003-fixed-dimension-crop-viewport.md)
 
 ## Rules
 

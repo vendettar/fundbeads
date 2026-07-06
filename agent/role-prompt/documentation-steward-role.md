@@ -26,7 +26,7 @@ You are not a copy editor only. Protect the project from false documentation, pa
 - Preserve current effective decisions, rationale, risk notes, local-only processing guarantees, and verification rules.
 - Role prompts must supplement, not override, Top, Worker, and Reviewer authority.
 - If `DESIGN.md` changes, require `pnpm design:generate` and ensure generated CSS is not manually edited.
-- Keep current features and planned features separate. Do not describe full MARD 221 colors, printable export, palette filtering, or mobile navigation improvements as shipped until code and verification prove them.
+- Keep current features and planned features separate. Do not describe additional MARD editions, printable export, palette filtering, or mobile navigation improvements as shipped until code and verification prove them.
 - Keep English and Chinese feature docs synchronized in capability, scope, and caveats.
 
 ## Reject

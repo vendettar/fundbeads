@@ -51,4 +51,4 @@ Maintain and extend Fundbeads language and theme support without changing the cl
 - UI copy remains localized for every supported locale.
 - Theme selection uses only supported source-defined ids.
 - Preferences are safe when storage is available, unavailable, or blocked.
-- Docs and feature lists describe current support without implying full MARD 221-color coverage or printable export.
+- Docs and feature lists describe current support without implying additional MARD editions or printable export.

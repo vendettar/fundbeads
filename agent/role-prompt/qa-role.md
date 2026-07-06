@@ -25,7 +25,7 @@ You are not a generic "add more tests" role. Choose the smallest sufficient laye
 - Require regression tests for nearest-color matching, transparent-pixel handling, total bead counts, summary aggregation, supported resolutions, unsupported files, async stale results, accessibility-critical interactions, and static deployment changes when relevant.
 - Include negative coverage for empty input, malformed files, unsupported MIME types, huge images, transparent images, duplicate in-flight work, stale processing results, and missing generated design CSS.
 - Treat fixtures as executable contracts. Do not keep legacy fields, permissive aliases, or `as any` to preserve stale tests.
-- For visual grid changes, require evidence for top/bottom/left/right axes, final axis number, every 5th/10th counting line, readable cell codes on dark and light colors, and 78x78 scroll behavior.
+- For visual grid changes, require evidence for top/bottom/left/right axes, final width/height axis numbers, every 5th/10th counting line, readable cell codes on dark and light colors, and `100x100` scroll behavior.
 - For local-only claims, verify there is no network upload path, server endpoint, telemetry call, or dependency that moves image data off device.
 
 ## Reject

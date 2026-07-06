@@ -14,13 +14,13 @@ Use this router to select the smallest sufficient role set for a task. All roles
 - **Reviewer** (`reviewer-role.md`): Performs final gatekeeping across implementation completeness, docs, architecture, contracts, performance, security evidence, and verification.
 
 ## Specialty Roles
-- **Pattern Contract Guardian** (`pattern-contract-role.md`): Use for `GridSize`, `BeadColor`, `Pattern`, `PatternCell`, `ColorUsage`, palette entries, exported/imported data shapes, fixture contracts, generated outputs, and component data boundaries.
+- **Pattern Contract Guardian** (`pattern-contract-role.md`): Use for `PatternDimensions`, `BeadColor`, `Pattern`, `PatternCell`, `ColorUsage`, palette entries, exported/imported data shapes, fixture contracts, generated outputs, and component data boundaries.
 - **Palette / Data Steward** (`palette-data-role.md`): Use for MARD color data, palette source integrity, RGB values, color labels, count aggregation, and future 221-color dataset replacement.
 - **QA / Test Engineer** (`qa-role.md`): Use for test strategy, regression design, image fixtures, async image processing, edge cases, accessibility checks, and verification command selection.
 - **Documentation / SSOT Steward** (`documentation-steward-role.md`): Use for docs rewrites, path drift, source-of-truth mapping, current-state wording, role prompt hygiene, decision logs, and instruction quality.
 - **Platform / SRE** (`platform-role.md`): Use for pnpm scripts, Vite build, Tailwind/design token generation, Docker/static serving, CI, deploy docs, generated assets, and operator workflows.
 - **Security Reviewer** (`security-role.md`): Use for browser file handling, object URLs, local-only guarantees, external inputs, export/import, secrets, dependency supply chain, and deployment boundaries.
-- **Performance / Resource Reviewer** (`performance-role.md`): Use for canvas sampling, image decode cost, 78x78 DOM grids, render churn, memory, large images, and long-session stability.
+- **Performance / Resource Reviewer** (`performance-role.md`): Use for canvas sampling, image decode cost, `100x100` DOM grids, render churn, memory, large images, and long-session stability.
 - **UI Designer** (`ui-designer-role.md`): Use for upload flow, resolution selector, dense pattern grid, axes, code readability, accessibility, responsive behavior, and design-token usage.
 - **Refactor Specialist** (`refactor-role.md`): Use for behavior-preserving cleanup, module boundaries, duplication removal, naming, and dead-code cleanup.
 

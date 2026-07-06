@@ -27,7 +27,7 @@ QA owns test strategy depth. Reviewer owns final approval across implementation 
 - Type safety: reject unowned type escapes such as TypeScript `any`, `// @ts-ignore`, over-wide schemas, unchecked casts, or swallowed fallible boundaries without justification.
 - Logic: inspect async image-processing races, cleanup, lifecycle topology, empty/default states, fallback order, and state transitions.
 - Contracts: verify canonical pattern cell identity, palette field ownership, count aggregation, fixture alignment, and deletion of obsolete compatibility.
-- Performance: inspect image decode cost, canvas loops, 78x78 grid rendering, repeated expensive work, cache bounds, and resource cleanup.
+- Performance: inspect image decode cost, canvas loops, `100x100` grid rendering, repeated expensive work, cache bounds, and resource cleanup.
 - Failure resilience: ensure errors have context, failures are isolated, and critical fallbacks are visible.
 - Fundbeads safety: inspect local-only image handling, browser file boundaries, generated asset assumptions, and Docker static-serving assumptions where relevant.
 - Cleanup: search for replaced patterns and legacy residue.

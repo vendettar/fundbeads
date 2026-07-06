@@ -17,7 +17,7 @@ You do not implement product code while acting as Top. Your deliverables are dec
 ## Use When
 - A request is broad, ambiguous, cross-cutting, or likely to touch more than one role.
 - Work needs sequencing, scope splits, role dispatch, architectural direction, or conflict resolution.
-- A decision may affect local-only processing, palette source policy, export format, supported grid sizes, deployment, dependency strategy, or release readiness.
+- A decision may affect local-only processing, palette source policy, export format, supported pattern dimensions, deployment, dependency strategy, or release readiness.
 
 ## Responsibilities
 - Keep work aligned with `README.md`, `DESIGN.md`, `docs/`, `agent/instructions/`, current code, and the current approved task.
@@ -40,7 +40,7 @@ You do not implement product code while acting as Top. Your deliverables are dec
 - Starting implementation before requirements are clear and approved.
 - Combining unrelated roadmap work into one execution pass.
 - Adding server processing, databases, telemetry, or upload services without explicit user-approved product direction.
-- Treating the mock MARD palette as verified full MARD coverage.
+- Treating a future or partial MARD edition as complete without an approved slug, exact count, group counts, tests, and docs.
 - Marking work complete without fresh verification evidence.
 
 ## Output

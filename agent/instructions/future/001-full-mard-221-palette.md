@@ -1,24 +1,23 @@
-# 001 Full MARD 221 Palette
+# 001 MARD 221 Palette
 
 ## Status
 
-Backlog. Not approved for implementation until selected.
+Implemented by direct user-approved task. Retained as historical planning context; do not route as future work.
 
 ## Goal
 
-Replace the current mock MARD palette subset with a verified full 221-color MARD palette without breaking pattern generation, summary counts, or UI readability.
+Use `mard-221` as the active built-in static MARD palette without breaking pattern generation, summary counts, or UI readability.
 
 ## Scope
 
-- Palette source validation and normalization.
-- `frontend/src/palette.ts` or a structured generated/static palette module.
+- Palette data normalization.
+- `frontend/src/palette.ts` and `frontend/src/palettes/mard.ts`.
 - Tests that depend on nearest-color matching and palette integrity.
-- Docs that explain palette source and mock/full status.
+- Docs that explain the active `mard-221` contract.
 
 ## Required Decisions
 
-- Source of the 221-color palette and review date.
-- Whether palette data remains hand-maintained TypeScript or is generated from a source artifact.
+- Whether future MARD editions remain hand-maintained TypeScript or are generated from a source artifact.
 - Duplicate-code and duplicate-RGB handling.
 - Palette ordering and tie-break behavior for equal RGB distances.
 - Whether the UI needs palette filtering or color-family grouping in the same release.
@@ -29,7 +28,7 @@ Replace the current mock MARD palette subset with a verified full 221-color MARD
 - No duplicate `code` exists unless variants are explicitly modeled.
 - Nearest-color matching remains deterministic.
 - Color usage counts still derive only from pattern cells.
-- Docs no longer describe the active palette as mock after verification lands.
+- Docs no longer describe the active palette as mock.
 
 ## Required Tests
 

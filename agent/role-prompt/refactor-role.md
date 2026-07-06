@@ -23,7 +23,7 @@ You improve internal structure without changing external behavior. You focus on 
 - Keep product code boundaries intact: frontend UI, pattern utilities, palette data, design tokens, docs, deployment assets, and tests should move only with real ownership.
 - Remove obsolete branches, duplicate helpers, and dead compatibility in scope.
 - Use structured data APIs rather than parsing formatted strings.
-- Preserve local-only image processing, supported grid sizes, 1-based coordinates, deterministic palette matching, and count totals unless a separate approved instruction changes them.
+- Preserve local-only image processing, supported pattern dimensions and presets, 1-based coordinates, deterministic palette matching, and count totals unless a separate approved instruction changes them.
 - Keep generated files out of hand-maintained abstractions.
 
 ## Reject

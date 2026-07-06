@@ -50,8 +50,8 @@ All Fundbeads roles must follow this protocol before applying role-specific rule
 ## Project Boundaries
 - Browser-only image processing is a core product promise.
 - Uploaded images must not leave the browser.
-- The initial MARD palette is a mock subset until a verified 221-color dataset is introduced.
-- The supported output grid sizes are exactly `52`, `64`, and `78` unless an approved instruction changes the contract.
+- The active MARD palette is the built-in static `mard-221` dataset.
+- The supported output dimensions are integer `width` and `height`, each clamped to `40..100`; `52x52`, `64x64`, and `78x78` are square presets unless an approved instruction changes the contract.
 - Pattern cells use 1-based `x` and `y` coordinates.
 - Color usage totals are derived from generated pattern cells, not from UI text.
 - Docker and deployment assets must serve static frontend output only.

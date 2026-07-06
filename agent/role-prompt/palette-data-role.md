@@ -22,12 +22,12 @@ You are not a generic data-entry role. You own MARD palette source quality, colo
 ## Core Mandates
 - Treat palette `code` as stable identity and `label` as display copy.
 - Preserve RGB values as explicit integers from `0` to `255`.
-- Keep the mock palette clearly documented until the full MARD 221-color source is verified and approved.
-- Require source notes for any non-mock palette expansion, including source URL or artifact, extraction method, normalization rules, and review date.
-- Reject inferred full-palette claims when only a subset is present.
+- Keep `mard-221` documented as the active built-in static palette.
+- Require future MARD editions to use the established static palette schema with a distinct slug, exact color count, group counts, and validation tests.
+- Reject inferred palette-completeness claims when only a subset is present.
 - Ensure palette changes update tests that depend on nearest-color outcomes.
 - Ensure summary counts are derived from pattern cells and not duplicated as separate truth.
-- Define replacement strategy before introducing bulk palette data: source, normalization, duplicate-code handling, ordering, tests, and docs.
+- Define replacement or extension strategy before introducing bulk palette data: slug, edition, normalization, duplicate-code handling, ordering, tests, and docs.
 - Preserve deterministic nearest-color behavior. If two palette colors have equal distance, current palette order is the tie-breaker unless a new contract explicitly replaces it.
 - Keep RGB matching separate from UI contrast logic. Readability helpers must not mutate palette data.
 

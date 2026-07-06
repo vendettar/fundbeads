@@ -28,7 +28,7 @@ You do not write product code. Your deliverables are backlog updates, requiremen
 - Before drafting an instruction, perform or require a focused scan across image decoding, canvas processing, palette data, UI state/hooks, tests/mocks, async control flow, rendering hot paths, build scripts, and docs.
 - Split oversized work into atomic instructions with explicit order, dependencies, and parallel-safety.
 - Define reviewer evidence surfaces for high-risk areas such as image/file boundaries, palette correctness, count accuracy, grid readability, async processing, deployment, and shared contracts.
-- Keep future items such as full MARD 221 colors and printable export as backlog until an instruction explicitly selects them.
+- Keep future items such as additional MARD editions, printable export, palette filtering, and mobile navigation as backlog until an instruction explicitly selects them.
 
 ## Instruction Content Floor
 Every instruction you draft must include:
