@@ -21,8 +21,6 @@ import {
 
 const colors = mardPalette.slice(0, 5) as BeadColor[];
 const [baseA, baseB, baseC, paintD, paintE] = colors;
-const h1 = mardPalette.find((color) => color.code === "H1") as BeadColor;
-const editingPalette = [...colors, h1];
 const testPatternWidth = 40;
 const testPatternHeight = 40;
 const testPatternTotal = testPatternWidth * testPatternHeight;
@@ -33,7 +31,7 @@ function createPattern(colorCodes: string[] = [baseA.code, baseB.code, baseC.cod
     ...Array.from({ length: testPatternTotal - colorCodes.length }, () => baseB.code),
   ];
   const cells: PatternCell[] = paddedCodes.map((code, index) => {
-    const color = editingPalette.find((candidate) => candidate.code === code);
+    const color = colors.find((candidate) => candidate.code === code);
     if (!color) {
       throw new Error(`Missing test color ${code}`);
     }
@@ -65,7 +63,7 @@ function createPatternWithDimensions(width: number, height: number): Pattern {
 }
 
 function effectiveCodes(pattern: Pattern) {
-  return pattern.cells.map((cell) => cell.color.code);
+  return pattern.cells.map((cell) => cell.color?.code ?? null);
 }
 
 function firstEffectiveCodes(pattern: Pattern, count = 4) {
@@ -127,7 +125,7 @@ describe("pattern edit helpers", () => {
         index === 0
           ? {
               ...cell,
-              color: { ...cell.color, code: "NOPE" },
+              color: { ...cell.color!, code: "NOPE" },
             }
           : cell,
       ),
@@ -153,12 +151,12 @@ describe("pattern edit helpers", () => {
     expect(getEffectivePattern(removed, colors).totalBeads).toBe(testPatternTotal);
   });
 
-  it("treats paint and H1 erase no-ops as history-free and rejects invalid operations", () => {
+  it("treats paint and already empty erase no-ops as history-free and rejects invalid operations", () => {
     const state = createPatternEditState(createPattern(), colors);
-    const whiteState = createPatternEditState(createPattern([h1.code, baseB.code, baseC.code, baseA.code]), editingPalette);
+    const erased = erasePatternCell(state, 0);
 
     expect(paintPatternCell(state, 0, baseA.code)).toBe(state);
-    expect(erasePatternCell(whiteState, 0, editingPalette)).toBe(whiteState);
+    expect(erasePatternCell(erased, 0)).toBe(erased);
     expect(() => paintPatternCell(state, -1, paintD.code)).toThrow("out of range");
     expect(() => paintPatternCell(state, testPatternTotal, paintD.code)).toThrow("out of range");
     expect(() => paintPatternCell(state, 0, "NOPE")).toThrow("Unknown MARD color code");
@@ -177,18 +175,25 @@ describe("pattern edit helpers", () => {
     expect(paintMode.undoStack).toEqual([]);
   });
 
-  it("erases cells to MARD H1 white without blank cells", () => {
-    const state = createPatternEditState(createPattern(), editingPalette);
+  it("erases cells to no-bead cells and excludes them from bead counts", () => {
+    const state = createPatternEditState(createPattern(), colors);
     const painted = paintPatternCell(state, 2, paintD.code);
-    const erased = erasePatternCell(painted, 2, editingPalette);
-    const erasedBaseCell = erasePatternCell(erased, 1, editingPalette);
-    const effective = getEffectivePattern(erasedBaseCell, editingPalette);
+    const erased = erasePatternCell(painted, 2);
+    const erasedBaseCell = erasePatternCell(erased, 1);
+    const effective = getEffectivePattern(erasedBaseCell, colors);
+    const repainted = paintPatternCell(erasedBaseCell, 1, paintD.code);
+    const repaintedEffective = getEffectivePattern(repainted, colors);
 
-    expect(erasedBaseCell.overrides).toEqual({ 1: h1.code, 2: h1.code });
-    expect(firstEffectiveCodes(effective)).toEqual([baseA.code, h1.code, h1.code, baseA.code]);
-    expect(effective.cells.every((cell) => Boolean(cell.color.code))).toBe(true);
-    expect(effective.totalBeads).toBe(effective.width * effective.height);
-    expect(effective.usage.find(({ color }) => color.code === h1.code)?.count).toBe(2);
+    expect(erasedBaseCell.overrides).toEqual({ 1: null, 2: null });
+    expect(firstEffectiveCodes(effective)).toEqual([baseA.code, null, null, baseA.code]);
+    expect(effective.cells[1].color).toBeNull();
+    expect(effective.cells[2].color).toBeNull();
+    expect(effective.totalBeads).toBe(testPatternTotal - 2);
+    expect(effective.usage.reduce((total, item) => total + item.count, 0)).toBe(testPatternTotal - 2);
+
+    expect(repainted.overrides).toEqual({ 1: paintD.code, 2: null });
+    expect(firstEffectiveCodes(repaintedEffective)).toEqual([baseA.code, paintD.code, null, baseA.code]);
+    expect(repaintedEffective.totalBeads).toBe(testPatternTotal - 1);
   });
 
   it("replaces effective source colors across base and overridden cells", () => {
@@ -222,9 +227,9 @@ describe("pattern edit helpers", () => {
   });
 
   it("undoes and redoes paint strokes, erase strokes, replace, and reset", () => {
-    const state = createPatternEditState(createPattern(), editingPalette);
+    const state = createPatternEditState(createPattern(), colors);
     const paintedStroke = paintPatternCells(state, [0, 1], paintD.code);
-    const erasedStroke = erasePatternCells(paintedStroke, [1, 2], editingPalette);
+    const erasedStroke = erasePatternCells(paintedStroke, [1, 2]);
     const replaced = replacePatternColor(erasedStroke, paintD.code, paintE.code);
     const reset = resetPatternEdits(replaced);
 
@@ -232,13 +237,14 @@ describe("pattern edit helpers", () => {
     expect(reset.undoStack).toHaveLength(4);
 
     const undoReset = undoPatternEdit(reset);
-    expect(firstEffectiveCodes(getEffectivePattern(undoReset, editingPalette))).toEqual([paintE.code, h1.code, h1.code, baseA.code]);
+    expect(firstEffectiveCodes(getEffectivePattern(undoReset, colors))).toEqual([paintE.code, null, null, baseA.code]);
+    expect(getEffectivePattern(undoReset, colors).totalBeads).toBe(testPatternTotal - 2);
 
     const undoReplace = undoPatternEdit(undoReset);
-    expect(firstEffectiveCodes(getEffectivePattern(undoReplace, editingPalette))).toEqual([paintD.code, h1.code, h1.code, baseA.code]);
+    expect(firstEffectiveCodes(getEffectivePattern(undoReplace, colors))).toEqual([paintD.code, null, null, baseA.code]);
 
     const redoReplace = redoPatternEdit(undoReplace);
-    expect(firstEffectiveCodes(getEffectivePattern(redoReplace, editingPalette))).toEqual([paintE.code, h1.code, h1.code, baseA.code]);
+    expect(firstEffectiveCodes(getEffectivePattern(redoReplace, colors))).toEqual([paintE.code, null, null, baseA.code]);
   });
 
   it("bounds undo history and clears redo after a new edit", () => {

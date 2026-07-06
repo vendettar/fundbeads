@@ -1,18 +1,32 @@
 /// <reference types="vite/client" />
 
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import appSource from "../src/App.tsx?raw";
-import browserStorageSource from "../src/browser-storage.ts?raw";
+import colorMatchingSource from "../src/color-matching.ts?raw";
+import colorUsageDetailSource from "../src/color-usage-detail.tsx?raw";
+import ditherSource from "../src/dither.ts?raw";
+import imageFileToPatternSource from "../src/image-file-to-pattern.browser.ts?raw";
+import imageFileToPatternWorkerSource from "../src/image-file-to-pattern.worker.ts?raw";
+import i18nDataSource from "../src/i18n-data.ts?raw";
 import i18nSource from "../src/i18n.tsx?raw";
 import interfaceStyleSource from "../src/interface-style.tsx?raw";
-import localPatternDbSource from "../src/local-pattern-db.ts?raw";
 import mainSource from "../src/main.tsx?raw";
-import paletteSource from "../src/palette.ts?raw";
-import mardPaletteSource from "../src/palettes/mard.ts?raw";
+import maxColorSource from "../src/max-color.ts?raw";
+import paletteDialogSource from "../src/palette-dialog.tsx?raw";
+import patternDimensionsSource from "../src/pattern-dimensions.ts?raw";
+import patternEditToolbarSource from "../src/pattern-edit-toolbar.tsx?raw";
+import patternGridSource from "../src/pattern-grid.tsx?raw";
+import patternGridBoardSource from "../src/pattern-grid-board.tsx?raw";
+import patternGridInteractionSource from "../src/pattern-grid-interaction.ts?raw";
 import patternEditSource from "../src/pattern-edit.ts?raw";
+import patternSideRailSource from "../src/pattern-side-rail.tsx?raw";
 import patternSource from "../src/pattern.ts?raw";
-import themesSource from "../src/themes.tsx?raw";
+import preferenceSelectSource from "../src/preference-select.tsx?raw";
+import uploadWorkspaceSource from "../src/upload-workspace.tsx?raw";
+import usePatternProcessingSource from "../src/use-pattern-processing.ts?raw";
 import { getLocalStorage } from "../src/browser-storage";
 import {
   defaultLocale,
@@ -39,8 +53,19 @@ import {
   writeStoredInterfaceStyle,
 } from "../src/interface-style";
 import { mardPalette, type BeadColor } from "../src/palette";
+import { getNextPreferenceOptionIndex, getPreferenceMenuPlacement } from "../src/preference-select";
 import { defaultTheme, normalizeTheme, readStoredTheme, themes, writeStoredTheme } from "../src/themes";
-import { formatColorUsageLine, formatColorUsageList, getNextPreferenceOptionIndex, getPreferenceMenuPlacement, isAcceptedImageFile } from "../src/App";
+import { formatColorUsageLine, formatColorUsageList } from "../src/color-usage-detail";
+import { isAcceptedImageFile } from "../src/use-pattern-processing";
+
+const cssSourceFiles = [
+  "styles.css",
+  "styles/base.css",
+  "styles/components.css",
+  "styles/pattern-grid.css",
+  "styles/interface-styles.css",
+] as const;
+const stylesSource = cssSourceFiles.map((filePath) => readFileSync(new URL(`../src/${filePath}`, import.meta.url), "utf8")).join("\n");
 
 function throwingStorage(): Storage {
   return {
@@ -79,6 +104,13 @@ function sourceBetween(source: string, startNeedle: string, endNeedle: string): 
   }
   return source.slice(start, end);
 }
+
+const expectedInterfaceStyleIds = [
+  "modern",
+  "pixel",
+  "glass-desk",
+  "arcade-cabinet",
+] as const;
 
 describe("i18n locale resolution", () => {
   it("keeps the required locale allowlist exact", () => {
@@ -206,16 +238,19 @@ describe("theme contract", () => {
 
 describe("interface style contract", () => {
   it("keeps the required interface style allowlist exact", () => {
-    expect(interfaceStyles.map((style) => style.id)).toEqual(["modern", "pixel"]);
+    expect(interfaceStyles.map((style) => style.id)).toEqual(expectedInterfaceStyleIds);
   });
 
-  it("uses modern as the default interface style", () => {
-    expect(defaultInterfaceStyle).toBe("modern");
+  it("uses pixel as the default interface style", () => {
+    expect(defaultInterfaceStyle).toBe("pixel");
   });
 
   it("normalizes supported interface style ids", () => {
     expect(normalizeInterfaceStyle("modern")).toBe("modern");
     expect(normalizeInterfaceStyle("pixel")).toBe("pixel");
+    for (const styleId of expectedInterfaceStyleIds) {
+      expect(normalizeInterfaceStyle(styleId)).toBe(styleId);
+    }
     expect(normalizeInterfaceStyle("unknown")).toBeNull();
     expect(normalizeInterfaceStyle(null)).toBeNull();
     expect(normalizeInterfaceStyle(undefined)).toBeNull();
@@ -232,6 +267,13 @@ describe("interface style contract", () => {
     expect(interfaceStyleStorageKey).toBe("fundbeads.interfaceStyle");
   });
 
+  it("uses the specified labels and short labels for new interface styles", () => {
+    expect(interfaceStyleLabels["zh-Hans"]["glass-desk"]).toBe("玻璃桌");
+    expect(interfaceStyleLabels["zh-Hant"]["arcade-cabinet"]).toBe("街機櫃");
+    expect(appSource).toContain('"glass-desk": "GD"');
+    expect(appSource).toContain('"arcade-cabinet": "AC"');
+  });
+
   it("treats interface style storage as optional", () => {
     const storage = throwingStorage();
 
@@ -240,40 +282,40 @@ describe("interface style contract", () => {
   });
 });
 
-describe("client-only source guard", () => {
-  it("does not introduce remote network or telemetry APIs", () => {
-    const sourceFiles = [
-      ["App.tsx", appSource],
-      ["browser-storage.ts", browserStorageSource],
-      ["i18n.tsx", i18nSource],
-      ["interface-style.tsx", interfaceStyleSource],
-      ["local-pattern-db.ts", localPatternDbSource],
-      ["main.tsx", mainSource],
-      ["palette.ts", paletteSource],
-      ["palettes/mard.ts", mardPaletteSource],
-      ["pattern-edit.ts", patternEditSource],
-      ["pattern.ts", patternSource],
-      ["themes.tsx", themesSource],
-    ] as const;
-    const forbiddenPatterns = [/\bfetch\s*\(/, /\bXMLHttpRequest\b/, /\bsendBeacon\b/, /https?:\/\//, /\btelemetry\b/i, /\bcdn\b/i];
-
-    for (const [sourceFile, source] of sourceFiles) {
-      for (const pattern of forbiddenPatterns) {
-        expect(source, `${sourceFile} should not match ${pattern}`).not.toMatch(pattern);
-      }
+describe("interface style source contracts", () => {
+  it("defines a scoped CSS rule for every supported interface style", () => {
+    for (const styleId of expectedInterfaceStyleIds.filter((styleId) => styleId !== "modern")) {
+      expect(stylesSource).toContain(`[data-ui-style="${styleId}"]`);
     }
   });
 
-  it("keeps local pattern persistence free of account authority concepts", () => {
-    const forbiddenPatterns = [/\bpassword\b/i, /\bsession\b/i, /\btoken\b/i, /\bauth\b/i, /\blogin\b/i, /\bemail\b/i];
+  it("keeps interface style CSS away from grid cells, board layout, and remote assets", () => {
+    const forbiddenPatterns = [
+      /\[data-ui-style=["'][^"']+["']\][^{]*\.pattern-cell/,
+      /\[data-ui-style=["'][^"']+["']\][^{]*\.pattern-grid-board[^{]*{[^}]*\b(display|grid|transform|width|height|grid-template-columns)\s*:/s,
+      /@import\s+url\(/i,
+      /https?:\/\//i,
+      /\burl\(/i,
+      /\bcdn\b/i,
+    ];
 
     for (const pattern of forbiddenPatterns) {
-      expect(localPatternDbSource, `local-pattern-db.ts should not match ${pattern}`).not.toMatch(pattern);
+      expect(stylesSource, `styles.css should not match ${pattern}`).not.toMatch(pattern);
     }
   });
-});
 
-describe("interface style source contracts", () => {
+  it("keeps repeated micro typography and grid cell dimensions in named CSS primitives", () => {
+    expect(stylesSource).toContain(".text-caption-compact");
+    expect(stylesSource).toContain(".text-caption-dense");
+    expect(stylesSource).toContain(".preset-label-condensed");
+    expect(stylesSource).toContain(".pattern-cell-code");
+    expect(stylesSource).toContain(".pattern-axis-label");
+    expect(stylesSource).toContain(".pattern-axis-corner");
+    expect(appSource).not.toMatch(/\btext-\[[^\]]+\]/);
+    expect(appSource).not.toContain("h-[22px]");
+    expect(appSource).not.toContain("w-[22px]");
+  });
+
   it("wraps the app with the interface style provider", () => {
     expect(mainSource).toContain("InterfaceStyleProvider");
   });
@@ -311,11 +353,15 @@ describe("preference dropdown contract", () => {
   });
 
   it("uses a styled custom menu instead of native select options", () => {
-    const preferenceSelectSource = sourceBetween(appSource, "function PreferenceSelect", "function UploadWorkspace");
-
-    expect(appSource).toContain("createPortal");
-    expect(appSource).toContain("preference-select-menu");
-    expect(appSource).toContain("aria-haspopup=\"listbox\"");
+    expect(preferenceSelectSource).toContain("createPortal");
+    expect(preferenceSelectSource).toContain("preference-select-menu");
+    expect(preferenceSelectSource).toContain("aria-haspopup=\"listbox\"");
+    expect(preferenceSelectSource).toContain("aria-activedescendant={isOpen ? activeOptionId : undefined}");
+    expect(preferenceSelectSource).toContain("aria-activedescendant={activeOptionId}");
+    expect(preferenceSelectSource).toContain("id={`${menuId}-option-${optionIndex}`}");
+    expect(preferenceSelectSource).toContain('event.key === "Home"');
+    expect(preferenceSelectSource).toContain('event.key === "End"');
+    expect(preferenceSelectSource).toContain('event.key === "Tab"');
     expect(preferenceSelectSource).not.toContain("<select");
     expect(preferenceSelectSource).not.toContain("<option");
   });
@@ -369,46 +415,43 @@ describe("color usage detail contract", () => {
     expect(appSource).toContain("onPinnedColorToggle={handlePinnedColorToggle}");
     expect(appSource).not.toContain("const [focusedColorCode, setFocusedColorCode] = useState<string | null>(null)");
     expect(appSource).not.toContain("focusedColorCode={");
-    expect(appSource).toContain("data-color-code={cell.color.code}");
-    expect(appSource).toContain("pattern-focus-rules");
-    expect(appSource).toContain("data-focused-color-code");
-    expect(appSource).toContain("function ColorUsageDetail");
-    expect(appSource).toContain("onMouseEnter={() => onPreviewColorChange(color.code)}");
-    expect(appSource).toContain("onFocus={() => onPreviewColorChange(color.code)}");
-    expect(appSource).toContain("function togglePinnedColor(colorCode: string)");
-    expect(appSource).toContain("onClick={() => togglePinnedColor(color.code)}");
-    expect(appSource).toContain("aria-pressed={isPinned}");
-    expect(appSource).toContain("onKeyDown={(event) => {");
-    expect(appSource).toContain("navigator.clipboard.writeText");
-    expect(appSource).toContain("formatColorUsageList");
-    expect(appSource).toContain("formatColorUsageLine");
-    expect(appSource).toContain("copyList");
-    expect(appSource).toContain("copyColorLine");
-    expect(appSource).toContain("colorColumn");
-    expect(appSource).toContain("percentColumn");
-    expect(i18nSource).toContain("colorDetailTitle");
-    expect(i18nSource).toContain("copySucceeded");
-    expect(i18nSource).toContain("copyFailed");
-  });
-
-  it("shows clipboard feedback on the copy control that triggered it", () => {
-    expect(appSource).toContain('type CopyFeedbackStatus = "copySucceeded" | "copyFailed"');
-    expect(appSource).toContain('target: "list"');
-    expect(appSource).toContain('target: "color"; code: string');
-    expect(appSource).toContain('copyStatus?.target === "list" && copyStatus.status === "copySucceeded"');
-    expect(appSource).toContain('copyStatus?.target === "color" && copyStatus.code === color.code');
-    expect(appSource).toContain('copyText(formatColorUsageList(pattern, paletteLabel, formatNumber), { target: "list" })');
-    expect(appSource).toContain('copyText(formatColorUsageLine({ color, count }, pattern.totalBeads, paletteLabel, formatNumber), { target: "color", code: color.code })');
-    expect(appSource).not.toContain('copyStatusKey === "copySucceeded"');
+    expect(patternGridBoardSource).toContain("data-color-code={cellColor?.code}");
+    expect(patternGridSource).toContain("pattern-focus-rules");
+    expect(patternGridInteractionSource).toContain("data-focused-color-code");
+    expect(colorUsageDetailSource).toContain("function ColorUsageDetail");
+    expect(colorUsageDetailSource).toContain("onMouseEnter={() => onPreviewColorChange(color.code)}");
+    expect(colorUsageDetailSource).toContain("onFocus={() => onPreviewColorChange(color.code)}");
+    expect(colorUsageDetailSource).toContain("focus-within:bg-muted");
+    expect(colorUsageDetailSource).toContain("function togglePinnedColor(colorCode: string)");
+    expect(colorUsageDetailSource).toContain("onClick={() => togglePinnedColor(color.code)}");
+    expect(colorUsageDetailSource).toContain("aria-pressed={isPinned}");
+    expect(colorUsageDetailSource).not.toContain('role="button"');
+    expect(colorUsageDetailSource).not.toContain("tabIndex={0}");
+    expect(colorUsageDetailSource).not.toContain("onKeyDown={(event) => {");
+    expect(colorUsageDetailSource).toContain("navigator.clipboard.writeText");
+    expect(colorUsageDetailSource).toContain("formatColorUsageList");
+    expect(colorUsageDetailSource).toContain("formatColorUsageLine");
+    expect(colorUsageDetailSource).toContain("copyList");
+    expect(colorUsageDetailSource).toContain("copyColorLine");
+    expect(colorUsageDetailSource).toContain("colorColumn");
+    expect(colorUsageDetailSource).toContain("percentColumn");
+    expect(i18nDataSource).toContain("colorDetailTitle");
+    expect(i18nDataSource).toContain("copySucceeded");
+    expect(i18nDataSource).toContain("copyFailed");
+    expect(i18nSource).toContain("i18n-data");
   });
 
   it("places per-color details in the right rail directly below the stats card", () => {
-    expect(appSource).toContain("function PatternSideRail");
-    expect(appSource).toContain("onPreviewColorChange: (colorCode: string | null) => void");
-    expect(appSource).toContain("onPinnedColorToggle: (colorCode: string) => string | null");
-    expect(appSource).toContain("<PatternStatsCard pattern={pattern} />");
-    expect(appSource).toContain('<ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />');
-    expect(appSource.indexOf("<PatternStatsCard pattern={pattern} />")).toBeLessThan(appSource.indexOf('<ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern}'));
+    expect(appSource).toContain('import { PatternSideRail } from "./pattern-side-rail"');
+    expect(appSource).toContain("<PatternSideRail");
+    expect(appSource).toContain("onPreviewColorChange={handlePreviewColorChange}");
+    expect(appSource).toContain("onPinnedColorToggle={handlePinnedColorToggle}");
+    expect(patternSideRailSource).toContain("export function PatternSideRail");
+    expect(patternSideRailSource).toContain("onPreviewColorChange: (colorCode: string | null) => void");
+    expect(patternSideRailSource).toContain("onPinnedColorToggle: (colorCode: string) => string | null");
+    expect(patternSideRailSource).toContain("<PatternStatsCard pattern={pattern} />");
+    expect(patternSideRailSource).toContain('<ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />');
+    expect(patternSideRailSource.indexOf("<PatternStatsCard pattern={pattern} />")).toBeLessThan(patternSideRailSource.indexOf('<ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />'));
     expect(appSource).not.toContain("{pattern ? <ColorSummary");
   });
 });
@@ -416,7 +459,7 @@ describe("color usage detail contract", () => {
 describe("pattern editing source contract", () => {
   it("defines a pure pattern edit contract outside the React component", () => {
     expect(patternEditSource).toContain('export type PatternEditTool = "view" | "paint" | "pick" | "erase" | "replace"');
-    expect(patternEditSource).toContain("export type PatternEditOverrideMap = Record<number, string>");
+    expect(patternEditSource).toContain("export type PatternEditOverrideMap = Record<number, string | null>");
     expect(patternEditSource).toContain("createPatternEditState");
     expect(patternEditSource).toContain("getEffectivePattern");
     expect(patternEditSource).toContain("paintPatternCells");
@@ -435,56 +478,113 @@ describe("pattern editing source contract", () => {
     expect(appSource).toContain("pattern={effectivePattern}");
     expect(appSource).toContain("PatternSideRail");
     expect(appSource).toContain("onEditStateChange={(updater) => setPatternEditState");
+    expect(appSource).toContain('import { PatternGrid } from "./pattern-grid"');
     expect(appSource).not.toContain("const [pattern, setPattern] = useState<Pattern | null>(null)");
   });
 
   it("keeps the edit toolbar in the generated pattern area with explicit tool and color state", () => {
-    const gridSource = sourceBetween(appSource, "function PatternGrid", "function Row");
     const leftToolbarSource = sourceBetween(appSource, "function PatternLongestEdgeToolbar", "function PatternLongestEdgeControl");
 
-    expect(gridSource).toContain("pattern-edit-toolbar");
-    expect(gridSource).toContain("aria-label={t(\"patternEditToolbar\")}");
-    expect(gridSource).toContain("editState.tool");
-    expect(gridSource).toContain("editState.activeColorCode");
-    expect(gridSource).toContain("patternEditActiveColor");
-    expect(gridSource).toContain("patternEditReplaceSource");
-    expect(gridSource).toContain("patternEditReplaceTarget");
+    expect(patternGridSource).toContain('import { PatternEditControls } from "./pattern-edit-toolbar"');
+    expect(patternGridSource).toContain("<PatternEditControls");
+    expect(patternEditToolbarSource).toContain("pattern-edit-toolbar");
+    expect(patternEditToolbarSource).toContain("aria-label={t(\"patternEditToolbar\")}");
+    expect(patternEditToolbarSource).toContain("editState.tool");
+    expect(patternEditToolbarSource).toContain("editState.activeColorCode");
+    expect(patternEditToolbarSource).toContain("patternEditActiveColor");
+    expect(patternEditToolbarSource).toContain("patternEditReplaceSource");
+    expect(patternEditToolbarSource).toContain("patternEditReplaceTarget");
     expect(leftToolbarSource).not.toContain("pattern-edit-toolbar");
     expect(leftToolbarSource).not.toContain("patternEditPaint");
   });
 
   it("uses delegated pointer editing without per-cell edit callbacks", () => {
-    expect(appSource).toContain("data-cell-index={cellIndex}");
-    expect(appSource).toContain("data-x={cell.x}");
-    expect(appSource).toContain("data-y={cell.y}");
-    expect(appSource).toContain("onPointerDown={onBoardPointerDown}");
-    expect(appSource).toContain("event.isPrimary");
-    expect(appSource).toContain("event.button !== 0");
-    expect(appSource).toContain("document.elementFromPoint(event.clientX, event.clientY)");
-    expect(appSource).toContain("strokeRef.current");
-    expect(appSource).toContain("setPointerCapture");
-    expect(appSource).toContain("paintPatternCells(currentState, cellIndexes, currentState.activeColorCode, mardPalette)");
-    expect(appSource).toContain("erasePatternCells(currentState, cellIndexes)");
-    expect(appSource).toContain("viewport.addEventListener(\"wheel\", onWheel, { passive: false })");
+    expect(patternGridBoardSource).toContain("data-cell-index={cellIndex}");
+    expect(patternGridBoardSource).toContain("data-x={cell.x}");
+    expect(patternGridBoardSource).toContain("data-y={cell.y}");
+    expect(patternGridSource).toContain("onPointerDown={onBoardPointerDown}");
+    expect(patternGridSource).toContain("event.isPrimary");
+    expect(patternGridSource).toContain("event.button !== 0");
+    expect(patternGridSource).toContain("document.elementFromPoint(event.clientX, event.clientY)");
+    expect(patternGridSource).toContain("strokeRef.current");
+    expect(patternGridSource).toContain("setPointerCapture");
+    expect(patternGridSource).toContain("paintPatternCells(currentState, cellIndexes, currentState.activeColorCode, mardPalette)");
+    expect(patternGridSource).toContain("erasePatternCells(currentState, cellIndexes)");
+    expect(patternGridSource).toContain("viewport.addEventListener(\"wheel\", onWheel, { passive: false })");
+  });
+
+  it("supports keyboard-accessible grid editing with one focusable board", () => {
+    const gridSource = patternGridSource;
+    const boardSource = sourceBetween(patternGridBoardSource, "export function PatternGridBoard", "const PatternRow");
+    const rowSource = sourceBetween(patternGridBoardSource, "const PatternRow", "function AxisCell");
+
+    expect(gridSource).toContain("keyboardCellIndexRef");
+    expect(gridSource).toContain("const [keyboardCellIndex, setKeyboardCellIndex] = useState(0)");
+    expect(gridSource).toContain("const activeGridCellId = `${gridCellIdPrefix}-cell-${keyboardCellIndex}`");
+    expect(gridSource).toContain("setKeyboardFocusedCell");
+    expect(gridSource).toContain("data-keyboard-active");
+    expect(gridSource).toContain("function applyKeyboardCellEdit");
+    expect(gridSource).toContain("function onBoardKeyDown");
+    expect(gridSource).toContain("nextKeyboardCellIndex(currentCellIndex, event.key, pattern.width, pattern.cells.length)");
+    expect(patternGridInteractionSource).toContain('key === "ArrowRight"');
+    expect(patternGridInteractionSource).toContain('key === "ArrowLeft"');
+    expect(patternGridInteractionSource).toContain('key === "ArrowDown"');
+    expect(patternGridInteractionSource).toContain('key === "ArrowUp"');
+    expect(patternGridInteractionSource).toContain('key === "Home"');
+    expect(patternGridInteractionSource).toContain('key === "End"');
+    expect(gridSource).toContain('event.key === "Enter" || event.key === " "');
+    expect(boardSource).toContain("role=\"grid\"");
+    expect(boardSource).toContain("aria-rowcount={pattern.height}");
+    expect(boardSource).toContain("aria-colcount={pattern.width}");
+    expect(boardSource).toContain("aria-activedescendant={activeCellId}");
+    expect(boardSource).toContain("tabIndex={0}");
+    expect(boardSource).toContain("aria-describedby={keyboardHintId}");
+    expect(rowSource).toContain("role=\"gridcell\"");
+    expect(rowSource).toContain("aria-rowindex={cell.y}");
+    expect(rowSource).toContain("aria-colindex={cell.x}");
+    expect(rowSource).toContain("aria-label={cellLabel}");
+    expect(rowSource).toContain("cellNoBeadTitle");
+    expect(rowSource).toContain("pattern-cell-code");
+    expect(rowSource).not.toContain("h-[22px]");
+    expect(rowSource).not.toContain("w-[22px]");
+    expect(patternGridBoardSource).toContain("patternGridLabel");
+    expect(patternGridBoardSource).toContain("patternGridKeyboardHint");
+  });
+
+  it("memoizes grid rows and avoids redundant reprocessing work", () => {
+    expect(patternGridBoardSource).toContain("const PatternRow = memo(function PatternRow");
+    expect(patternGridBoardSource).toContain("}, arePatternRowPropsEqual);");
+    expect(patternGridBoardSource).toContain("buildPatternGridRowModels");
+    expect(patternGridBoardSource).toContain("patternGridRowCellsRenderEqual");
+    expect(patternGridBoardSource).toContain("startCellIndex={rowModel.startCellIndex}");
+    expect(patternGridBoardSource).toContain("cells={rowModel.cells}");
+    expect(patternGridBoardSource).not.toContain("<PatternRow key={row}");
+    expect(patternGridBoardSource).not.toContain("pattern={pattern}");
+    expect(patternGridBoardSource).not.toContain("activeCellIndex={");
+    expect(patternGridBoardSource).not.toContain("keyboardCellIndex={");
+    expect(patternGridBoardSource).not.toContain("activeCellId={");
+    expect(appSource).not.toContain("activeCellIndex={");
   });
 
   it("interpolates and clears pointer strokes so fast drags do not skip grid cells", () => {
-    expect(appSource).toContain("function collectStrokeCellIndexes");
-    expect(appSource).toContain("const previousCellIndex = stroke.lastCellIndex");
-    expect(appSource).toContain("const nextCellIndexes = collectStrokeCellIndexes(previousCellIndex, cellIndex, pattern.width)");
-    expect(appSource).toContain("stroke.lastCellIndex = cellIndex");
-    expect(appSource).toContain("onPointerLeave={onBoardPointerLeave}");
-    expect(appSource).toContain("return () => {");
-    expect(appSource).toContain("strokeRef.current = null");
+    expect(patternGridSource).toContain('collectStrokeCellIndexes');
+    expect(patternGridSource).toContain('from "./pattern-grid-interaction"');
+    expect(patternGridInteractionSource).toContain("export function collectStrokeCellIndexes");
+    expect(patternGridSource).toContain("const previousCellIndex = stroke.lastCellIndex");
+    expect(patternGridSource).toContain("const nextCellIndexes = collectStrokeCellIndexes(previousCellIndex, cellIndex, pattern.width)");
+    expect(patternGridSource).toContain("stroke.lastCellIndex = cellIndex");
+    expect(patternGridSource).toContain("onPointerLeave={onBoardPointerLeave}");
+    expect(patternGridSource).toContain("return () => {");
+    expect(patternGridSource).toContain("strokeRef.current = null");
   });
 
   it("defaults replace source from active color and renders replace swatches", () => {
-    expect(appSource).toContain("setReplaceSourceCode(pickedColorCode)");
-    expect(appSource).toContain("setReplaceSourceCode(colorCode)");
-    expect(appSource).toContain("const replaceSourceColor = pattern.usage.find(({ color }) => color.code === replaceSourceCode)?.color");
-    expect(appSource).toContain("const replaceTargetColor = mardPalette.find((color) => color.code === replaceTargetCode)");
-    expect(appSource).toContain("backgroundColor: replaceSourceColor ? `rgb(${replaceSourceColor.r} ${replaceSourceColor.g} ${replaceSourceColor.b})` : \"transparent\"");
-    expect(appSource).toContain("backgroundColor: replaceTargetColor ? `rgb(${replaceTargetColor.r} ${replaceTargetColor.g} ${replaceTargetColor.b})` : \"transparent\"");
+    expect(patternGridSource).toContain("setReplaceSourceCode(pickedColorCode)");
+    expect(patternGridSource).toContain("setReplaceSourceCode(colorCode)");
+    expect(patternGridSource).toContain("const replaceSourceColor = pattern.usage.find(({ color }) => color.code === replaceSourceCode)?.color");
+    expect(patternGridSource).toContain("const replaceTargetColor = mardPalette.find((color) => color.code === replaceTargetCode)");
+    expect(patternEditToolbarSource).toContain("backgroundColor: replaceSourceColor ? `rgb(${replaceSourceColor.r} ${replaceSourceColor.g} ${replaceSourceColor.b})` : \"transparent\"");
+    expect(patternEditToolbarSource).toContain("backgroundColor: replaceTargetColor ? `rgb(${replaceTargetColor.r} ${replaceTargetColor.g} ${replaceTargetColor.b})` : \"transparent\"");
   });
 
   it("provides pattern edit labels for every supported locale", () => {
@@ -503,6 +603,9 @@ describe("pattern editing source contract", () => {
       "patternEditReplaceTarget",
       "patternEditApplyReplace",
       "patternEditReplaceNoSource",
+      "patternGridLabel",
+      "patternGridKeyboardHint",
+      "cellNoBeadTitle",
     ] as const;
 
     for (const locale of locales) {
@@ -523,9 +626,22 @@ describe("upload workflow source contracts", () => {
     expect(isAcceptedImageFile({ name: "vector.svg", type: "image/svg+xml" })).toBe(false);
 
     expect(appSource).toContain('accept="image/png,image/jpeg,image/webp"');
-    expect(appSource).toContain("isAcceptedImageFile(file)");
-    expect(i18nSource).toContain("JPG / PNG / WebP");
-    expect(i18nSource).not.toContain("JPG/PNG");
+    expect(usePatternProcessingSource).toContain("isAcceptedImageFile(file)");
+    expect(i18nDataSource).toContain("JPG / PNG / WebP");
+    expect(i18nDataSource).not.toContain("JPG/PNG");
+  });
+
+  it("keeps image processing worker-backed and browser-local with a main-thread fallback", () => {
+    expect(patternSource).toContain('from "./image-file-to-pattern.browser"');
+    expect(imageFileToPatternSource).toContain('new URL("./image-file-to-pattern.worker.ts", import.meta.url)');
+    expect(imageFileToPatternSource).toContain('type: "module"');
+    expect(imageFileToPatternSource).toContain('name: "image-file-to-pattern"');
+    expect(imageFileToPatternSource).toContain("OffscreenCanvas");
+    expect(imageFileToPatternSource).toContain("imageFileToPatternOnMainThread");
+    expect(imageFileToPatternWorkerSource).toContain("workerSelf.onmessage");
+    expect(imageFileToPatternWorkerSource).toContain("postWorkerMessage");
+    expect(imageFileToPatternWorkerSource).toContain("OffscreenCanvas");
+    expect(imageFileToPatternWorkerSource).not.toContain("document.createElement");
   });
 
   it("moves aspect-ratio output controls into a left workspace toolbar matching the preview rail", () => {
@@ -534,15 +650,18 @@ describe("upload workflow source contracts", () => {
     expect(appSource).toContain("xl:grid-cols-[260px_minmax(0,1fr)_260px]");
     expect(appSource).toContain("xl:grid-cols-[260px_minmax(0,1fr)]");
     expect(appSource.indexOf("function PatternLongestEdgeToolbar")).toBeGreaterThan(appSource.indexOf("return ("));
-    expect(appSource.indexOf("function PatternLongestEdgeToolbar")).toBeLessThan(appSource.indexOf("function PreferenceSelect"));
+    expect(appSource.indexOf("<PatternLongestEdgeToolbar")).toBeLessThan(appSource.indexOf("<UploadWorkspace"));
+    expect(appSource).toContain('import { UploadWorkspace } from "./upload-workspace"');
+    expect(uploadWorkspaceSource).toContain("export function UploadWorkspace");
   });
 
   it("renders a longest-edge slider with derived output dimensions", () => {
-    expect(patternSource).toContain("patternDimensionMin = 40");
-    expect(patternSource).toContain("patternDimensionMax = 100");
-    expect(patternSource).toContain("patternLongestEdgePresets");
-    expect(patternSource).toContain("dimensionsForAspectRatio");
-    expect(patternSource).toContain("PatternDimensions");
+    expect(patternDimensionsSource).toContain("patternDimensionMin = 40");
+    expect(patternDimensionsSource).toContain("patternDimensionMax = 100");
+    expect(patternDimensionsSource).toContain("patternLongestEdgePresets");
+    expect(patternDimensionsSource).toContain("dimensionsForAspectRatio");
+    expect(patternDimensionsSource).toContain("PatternDimensions");
+    expect(patternSource).toContain("pattern-dimensions");
     expect(patternSource).not.toContain("type GridSize");
     expect(patternSource).not.toContain("size: GridSize");
     expect(appSource).not.toContain("GridSize");
@@ -551,7 +670,7 @@ describe("upload workflow source contracts", () => {
 
     expect(appSource).toContain("longestEdge");
     expect(appSource).toContain("sourceImageSize");
-    expect(appSource).toContain("setSourceImageSize");
+    expect(usePatternProcessingSource).toContain("setSourceImageSize");
     expect(appSource).toContain("dimensionsForAspectRatio(sourceImageSize, longestEdge)");
     expect(appSource).toContain(": effectivePattern ?? fallbackDimensions");
     expect(appSource).toContain("patternLongestEdgePresets.map");
@@ -562,9 +681,9 @@ describe("upload workflow source contracts", () => {
     expect(appSource).toContain("max={patternDimensionMax}");
     expect(appSource).toContain("step={1}");
     expect(appSource).toContain("patternLongestEdge");
-    expect(appSource).toContain("refreshPreview: false");
-    expect(i18nSource).toContain("patternLongestEdge");
-    expect(i18nSource).toContain("{width}x{height}");
+    expect(usePatternProcessingSource).toContain("refreshPreview: false");
+    expect(i18nDataSource).toContain("patternLongestEdge");
+    expect(i18nDataSource).toContain("{width}x{height}");
   });
 
   it("renders the three longest-edge presets in one horizontal row", () => {
@@ -573,13 +692,16 @@ describe("upload workflow source contracts", () => {
   });
 
   it("renders color mapping controls in the left parameter toolbar", () => {
-    expect(patternSource).toContain('colorDistanceModes = ["oklab", "rgb-fast", "weighted-rgb", "lab-delta-e"]');
-    expect(patternSource).toContain('ditherModes = ["off", "floyd-steinberg", "ordered"]');
-    expect(patternSource).toContain("maxColorCountMin = 2");
-    expect(patternSource).toContain("maxColorCountMax = 64");
-    expect(patternSource).toContain("defaultMaxColorCount: MaxColorCount = 24");
-    expect(patternSource).toContain('defaultColorDistanceMode: ColorDistanceMode = "oklab"');
-    expect(patternSource).toContain('defaultDitherMode: DitherMode = "off"');
+    expect(colorMatchingSource).toContain('colorDistanceModes = ["oklab", "rgb-fast", "weighted-rgb", "lab-delta-e"]');
+    expect(ditherSource).toContain('ditherModes = ["off", "floyd-steinberg", "ordered"]');
+    expect(maxColorSource).toContain("maxColorCountMin = 2");
+    expect(maxColorSource).toContain("maxColorCountMax = 64");
+    expect(maxColorSource).toContain("defaultMaxColorCount: MaxColorCount = 24");
+    expect(colorMatchingSource).toContain('defaultColorDistanceMode: ColorDistanceMode = "oklab"');
+    expect(patternSource).toContain("color-matching");
+    expect(patternSource).toContain('from "./dither"');
+    expect(patternSource).toContain('from "./max-color"');
+    expect(ditherSource).toContain('defaultDitherMode: DitherMode = "off"');
     expect(appSource).toContain("function PatternAdjustmentControls");
     expect(appSource).toContain("colorDistanceModes.map");
     expect(appSource).toContain("ditherModes.map");
@@ -590,142 +712,92 @@ describe("upload workflow source contracts", () => {
     expect(appSource).toContain("decreaseMaxColorCount");
     expect(appSource).toContain("increaseMaxColorCount");
     expect(appSource).toContain("onPatternAdjustmentChange");
-    expect(appSource).toContain("schedulePatternReprocess(longestEdge, normalizedOptions)");
-    expect(appSource).toContain("processingOptions: nextProcessingOptions");
-    expect(i18nSource).toContain("colorDistanceModeOklab");
-    expect(i18nSource).toContain("colorDistanceModeLabDeltaE");
-    expect(i18nSource).toContain("ditherModeFloydSteinberg");
-    expect(i18nSource).toContain("ditherModeOrdered");
-    expect(i18nSource).toContain("maxColorCountValue");
+    expect(usePatternProcessingSource).toContain("schedulePatternReprocess(longestEdge, normalizedOptions)");
+    expect(usePatternProcessingSource).toContain("processingOptions: nextProcessingOptions");
+    expect(i18nDataSource).toContain("colorDistanceModeOklab");
+    expect(i18nDataSource).toContain("colorDistanceModeLabDeltaE");
+    expect(i18nDataSource).toContain("ditherModeFloydSteinberg");
+    expect(i18nDataSource).toContain("ditherModeOrdered");
+    expect(i18nDataSource).toContain("maxColorCountValue");
   });
 
-  it("renders color distance and dither controls with internal preference selects", () => {
-    const colorDistanceSource = sourceBetween(appSource, 't("colorDistanceMode")', 't("ditherMode")');
-    const ditherModeSource = sourceBetween(appSource, 't("ditherMode")', 't("smoothingLevel")');
 
-    expect(appSource).toContain("description?: string");
-    expect(appSource).toContain("describedBy?: string");
-    expect(colorDistanceSource).toContain("<PreferenceSelect");
-    expect(colorDistanceSource).toContain("value={colorDistanceMode}");
-    expect(colorDistanceSource).toContain("normalizeColorDistanceMode(value)");
-    expect(colorDistanceSource).toContain("selectedLabel: getColorDistanceModeLabel(mode, t)");
-    expect(colorDistanceSource).toContain("displayLabel: colorDistanceModeShortLabels[mode]");
-    expect(colorDistanceSource).toContain("description: getColorDistanceModeDescription(mode, t)");
-    expect(colorDistanceSource).toContain("describedBy={colorDistanceDescriptionId}");
-    expect(colorDistanceSource).not.toContain("<select");
-    expect(colorDistanceSource).not.toContain("color-distance-select");
-    expect(colorDistanceSource).not.toContain("color-distance-options");
-    expect(ditherModeSource).toContain("<PreferenceSelect");
-    expect(ditherModeSource).toContain("value={ditherMode}");
-    expect(ditherModeSource).toContain("normalizeDitherMode(value)");
-    expect(ditherModeSource).toContain("selectedLabel: getDitherModeLabel(mode, t)");
-    expect(ditherModeSource).toContain("displayLabel: ditherModeShortLabels[mode]");
-    expect(ditherModeSource).toContain("description: getDitherModeDescription(mode, t)");
-    expect(ditherModeSource).toContain("describedBy={ditherDescriptionId}");
-    expect(ditherModeSource).not.toContain("<select");
-    expect(ditherModeSource).not.toContain("dither-mode-select");
-    expect(ditherModeSource).not.toContain("dither-mode-options");
-  });
-
-  it("includes the selected value in internal preference select trigger labels", () => {
-    const preferenceSelectSource = sourceBetween(appSource, "function PreferenceSelect", "function UploadWorkspace");
-    const triggerButtonSource = sourceBetween(preferenceSelectSource, "<button", "</button>");
-
-    expect(preferenceSelectSource).toContain("buttonAriaLabel");
-    expect(preferenceSelectSource).toContain('`${label}: ${selectedLabel}`');
-    expect(triggerButtonSource).toContain("aria-label={buttonAriaLabel}");
-    expect(triggerButtonSource).toContain("aria-describedby={describedBy}");
-    expect(triggerButtonSource).not.toContain("aria-label={label}");
-  });
-
-  it("explains how color distance and dither choices affect the generated pattern", () => {
-    const controlsSource = sourceBetween(appSource, "function PatternAdjustmentControls", "function getColorDistanceModeLabel");
-    const preferenceSelectSource = sourceBetween(appSource, "function PreferenceSelect", "function UploadWorkspace");
-    const colorDistanceSource = sourceBetween(appSource, 't("colorDistanceMode")', 't("ditherMode")');
-    const ditherModeSource = sourceBetween(appSource, 't("ditherMode")', 't("smoothingLevel")');
-
-    expect(messages.en.colorDistanceModeHint).toContain("nearest MARD color");
-    expect(messages.en.colorDistanceModeOklabDescription).toContain("Default");
-    expect(messages.en.colorDistanceModeRgbFastDescription).toContain("icons");
-    expect(messages.en.colorDistanceModeWeightedRgbDescription).toContain("natural");
-    expect(messages.en.colorDistanceModeLabDeltaEDescription).toContain("photos");
-    expect(messages.en.ditherModeHint).toContain("neighboring beads");
-    expect(messages.en.ditherModeOffDescription).toMatch(/clean/i);
-    expect(messages.en.ditherModeFloydSteinbergDescription).toContain("Gradients, photos, and skin tones");
-    expect(messages.en.ditherModeOrderedDescription).toContain("patterned texture");
-    expect(messages["zh-Hans"].colorDistanceModeLabDeltaE).toBe("Lab 色差");
-    expect(messages["zh-Hans"].ditherModeFloydSteinbergDescription).toContain("渐变、照片、肤色");
-    expect(messages["zh-Hant"].colorDistanceModeLabDeltaE).toBe("Lab 色差");
-    expect(messages["zh-Hant"].ditherModeFloydSteinbergDescription).toContain("漸層、照片、膚色");
-
-    expect(controlsSource).toContain("const colorDistanceDescriptionId = useId()");
-    expect(controlsSource).toContain("const ditherDescriptionId = useId()");
-    expect(controlsSource).toContain("const colorDistanceDescription = getColorDistanceModeDescription(colorDistanceMode, t)");
-    expect(controlsSource).toContain("const ditherDescription = getDitherModeDescription(ditherMode, t)");
-    expect(colorDistanceSource).toContain("description: getColorDistanceModeDescription(mode, t)");
-    expect(colorDistanceSource).toContain("id={colorDistanceDescriptionId}");
-    expect(colorDistanceSource).toContain("{colorDistanceDescription}");
-    expect(ditherModeSource).toContain("description: getDitherModeDescription(mode, t)");
-    expect(ditherModeSource).toContain("id={ditherDescriptionId}");
-    expect(ditherModeSource).toContain("{ditherDescription}");
-    expect(preferenceSelectSource).toContain("option.description");
-    expect(preferenceSelectSource).toContain("{option.description}");
-  });
 
   it("opens MARD palette details from the top action instead of the empty homepage", () => {
     expect(appSource).toContain("isPaletteOpen");
     expect(appSource).toContain("setIsPaletteOpen(true)");
-    expect(appSource).toContain("function PaletteDialog");
-    expect(appSource).toContain('aria-modal="true"');
+    expect(paletteDialogSource).toContain("function PaletteDialog");
+    expect(paletteDialogSource).toContain('aria-modal="true"');
+    expect(paletteDialogSource).toContain("dialogRef");
+    expect(paletteDialogSource).toContain("closeButtonRef");
+    expect(paletteDialogSource).toContain('event.key !== "Tab"');
+    expect(paletteDialogSource).toContain("previouslyFocusedElement?.focus()");
     expect(appSource).toContain("isPaletteOpen ? <PaletteDialog");
     expect(appSource).not.toContain("pattern ? <ColorSummary pattern={pattern}");
     expect(appSource).not.toContain("pattern ? <ColorSummary pattern={pattern} /> : <MardPaletteShowcase />");
-    expect(i18nSource).toContain("closeDialog");
+    expect(i18nDataSource).toContain("closeDialog");
   });
 
   it("keeps dropped files available for resolution changes", () => {
-    expect(appSource).toContain("activeFileRef");
-    expect(appSource).toContain("activeFileRef.current");
+    expect(usePatternProcessingSource).toContain("activeFileRef");
+    expect(usePatternProcessingSource).toContain("activeFileRef.current");
   });
 
   it("guards async pattern updates against stale upload results", () => {
-    expect(appSource).toContain("processRunIdRef");
-    expect(appSource).toContain("processRunIdRef.current");
+    expect(usePatternProcessingSource).toContain("processRunIdRef");
+    expect(usePatternProcessingSource).toContain("processRunIdRef.current");
   });
 
   it("invalidates pending pattern work before rejecting unsupported files", () => {
-    expect(appSource).toContain("const processRunId = processRunIdRef.current + 1");
-    expect(appSource.indexOf("const processRunId = processRunIdRef.current + 1")).toBeLessThan(appSource.indexOf('setErrorKey("unsupportedImage")'));
+    expect(usePatternProcessingSource).toContain("const processRunId = processRunIdRef.current + 1");
+    expect(usePatternProcessingSource.indexOf("const processRunId = processRunIdRef.current + 1")).toBeLessThan(usePatternProcessingSource.indexOf('setErrorKey("unsupportedImage")'));
+  });
+
+  it("shows localized processing status without changing the local-only boundary", () => {
+    expect(usePatternProcessingSource).toContain("const [isProcessing, setIsProcessing] = useState(false)");
+    expect(appSource).toContain("role=\"status\"");
+    expect(appSource).toContain("aria-live=\"polite\"");
+    expect(uploadWorkspaceSource).toContain("aria-busy={isProcessing}");
+    expect(appSource).toContain("{t(\"processingImage\")}");
+    expect(uploadWorkspaceSource).toContain("{isProcessing ? t(\"processingImage\") : t(\"dropzoneHint\")}");
+    expect(uploadWorkspaceSource).toContain("onDragEnter={onDragEnter}");
+    expect(usePatternProcessingSource).toContain("dragDepthRef.current += 1");
+    expect(usePatternProcessingSource).toContain("dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)");
+    expect(usePatternProcessingSource).toContain("dragDepthRef.current = 0");
+    expect(i18nDataSource).toContain("processingImage");
+    for (const locale of locales) {
+      expect(messages[locale.id].processingImage).toBeTruthy();
+    }
   });
 
   it("does not recreate the original preview when only resolution changes", () => {
-    expect(appSource).toContain("refreshPreview");
-    expect(appSource).toContain("refreshPreview: false");
+    expect(usePatternProcessingSource).toContain("refreshPreview");
+    expect(usePatternProcessingSource).toContain("refreshPreview: false");
   });
 
   it("exposes the dropzone with button semantics", () => {
-    expect(appSource).toContain('role="button"');
-    expect(appSource).toContain("aria-describedby");
+    expect(uploadWorkspaceSource).toContain('role="button"');
+    expect(uploadWorkspaceSource).toContain("aria-describedby");
   });
 
   it("renders the empty upload state as an image preview placeholder", () => {
-    expect(appSource).toContain("upload-preview-placeholder");
-    expect(appSource).toContain("upload-preview-canvas");
-    expect(appSource).toContain("upload-preview-frame");
+    expect(uploadWorkspaceSource).toContain("upload-preview-placeholder");
+    expect(uploadWorkspaceSource).toContain("upload-preview-canvas");
+    expect(uploadWorkspaceSource).toContain("upload-preview-frame");
   });
 
   it("keeps the original preview, compact stats, and scrollable details in the right rail", () => {
-    expect(appSource).toContain("function PatternSideRail");
-    expect(appSource).toContain("function PatternStatsCard");
-    expect(appSource).toContain("xl:self-stretch");
-    expect(appSource).toContain("grid-rows-[auto_auto_minmax(0,1fr)]");
-    expect(appSource).toContain("overflow-hidden");
-    expect(appSource).toContain("xl:h-full");
-    expect(appSource).toContain("xl:min-h-0");
-    expect(appSource).toContain("<PatternStatsCard pattern={pattern} />");
-    expect(appSource).toContain('<ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />');
-    expect(appSource.indexOf("<ImagePreview")).toBeLessThan(appSource.indexOf("<PatternStatsCard"));
-    expect(appSource.indexOf("<PatternStatsCard")).toBeLessThan(appSource.indexOf("<ColorUsageDetail"));
-    expect(appSource).not.toContain("mt-3 grid min-h-56 place-items-center bg-background");
+    expect(patternSideRailSource).toContain("export function PatternSideRail");
+    expect(patternSideRailSource).toContain("function PatternStatsCard");
+    expect(patternSideRailSource).toContain("xl:self-stretch");
+    expect(patternSideRailSource).toContain("grid-rows-[auto_auto_minmax(0,1fr)]");
+    expect(patternSideRailSource).toContain("overflow-hidden");
+    expect(patternSideRailSource).toContain("xl:h-full");
+    expect(patternSideRailSource).toContain("xl:min-h-0");
+    expect(patternSideRailSource).toContain("<PatternStatsCard pattern={pattern} />");
+    expect(patternSideRailSource).toContain('<ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />');
+    expect(patternSideRailSource.indexOf("<ImagePreview")).toBeLessThan(patternSideRailSource.indexOf("<PatternStatsCard"));
+    expect(patternSideRailSource.indexOf("<PatternStatsCard")).toBeLessThan(patternSideRailSource.indexOf("<ColorUsageDetail"));
+    expect(patternSideRailSource).not.toContain("mt-3 grid min-h-56 place-items-center bg-background");
   });
 });

@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
+import * as colorMatching from "../src/color-matching";
+import * as dither from "../src/dither";
+import * as imageFilePattern from "../src/image-file-to-pattern.browser";
+import * as maxColor from "../src/max-color";
 import { mardPalette, type BeadColor } from "../src/palette";
+import * as patternFacade from "../src/pattern";
+import * as patternProcessing from "../src/pattern-processing";
 import {
   cellsToPattern,
   colorDistanceModes,
@@ -95,6 +101,232 @@ describe("pattern logic", () => {
     expect(normalizeMaxColorCount(99)).toBe(64);
   });
 
+  it("keeps pattern as the stable facade for color matching exports", () => {
+    expect(patternFacade.colorDistanceModes).toBe(colorMatching.colorDistanceModes);
+    expect(patternFacade.defaultColorDistanceMode).toBe(colorMatching.defaultColorDistanceMode);
+    expect(patternFacade.colorDistance).toBe(colorMatching.colorDistance);
+    expect(patternFacade.weightedColorDistance).toBe(colorMatching.weightedColorDistance);
+    expect(patternFacade.normalizeColorDistanceMode).toBe(colorMatching.normalizeColorDistanceMode);
+    expect(patternFacade.compositeRgbOverWhite).toBe(colorMatching.compositeRgbOverWhite);
+    expect(patternFacade.toOklab).toBe(colorMatching.toOklab);
+    expect(patternFacade.toCieLab).toBe(colorMatching.toCieLab);
+    expect(patternFacade.labDeltaE76).toBe(colorMatching.labDeltaE76);
+    expect(patternFacade.nearestBeadColor).toBe(colorMatching.nearestBeadColor);
+    expect(patternFacade.readableTextColor).toBe(colorMatching.readableTextColor);
+  });
+
+  it("keeps pattern as the stable facade for dither and max-color exports", () => {
+    expect(patternFacade.ditherModes).toBe(dither.ditherModes);
+    expect(patternFacade.defaultDitherMode).toBe(dither.defaultDitherMode);
+    expect(patternFacade.normalizeDitherMode).toBe(dither.normalizeDitherMode);
+    expect(patternFacade.maxColorCountMin).toBe(maxColor.maxColorCountMin);
+    expect(patternFacade.maxColorCountMax).toBe(maxColor.maxColorCountMax);
+    expect(patternFacade.defaultMaxColorCount).toBe(maxColor.defaultMaxColorCount);
+    expect(patternFacade.normalizeMaxColorCount).toBe(maxColor.normalizeMaxColorCount);
+  });
+
+  it("keeps pattern as the stable facade for processing and browser image exports", () => {
+    expect(patternFacade.defaultSmoothingLevel).toBe(patternProcessing.defaultSmoothingLevel);
+    expect(patternFacade.smoothingLevelMin).toBe(patternProcessing.smoothingLevelMin);
+    expect(patternFacade.smoothingLevelMax).toBe(patternProcessing.smoothingLevelMax);
+    expect(patternFacade.normalizeSmoothingLevel).toBe(patternProcessing.normalizeSmoothingLevel);
+    expect(patternFacade.cellsToPattern).toBe(patternProcessing.cellsToPattern);
+    expect(patternFacade.patternPixelsToPattern).toBe(patternProcessing.patternPixelsToPattern);
+    expect(patternFacade.imageFileToPattern).toBe(imageFilePattern.imageFileToPattern);
+    expect(Object.keys(patternFacade)).not.toEqual(
+      expect.arrayContaining(["imageFileToPatternOnMainThread", "imageFileToPatternInWorker", "canUseImageProcessingWorker"]),
+    );
+  });
+
+  it("uses a module worker for browser image processing when offscreen canvas is available", async () => {
+    const file = { name: "photo.png", type: "image/png" } as File;
+    const sourceImageSize = { width: 80, height: 40 };
+    const workerPatternCode = mardPalette[0].code;
+    let postedRequest: unknown;
+    const createdWorkers: FakePatternWorker[] = [];
+
+    class FakePatternWorker {
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onerror: ((event: Event) => void) | null = null;
+      terminated = false;
+
+      constructor(
+        readonly url: URL,
+        readonly options: WorkerOptions,
+      ) {
+        createdWorkers.push(this);
+      }
+
+      postMessage(message: unknown) {
+        postedRequest = message;
+        const requestId = (message as { requestId: string }).requestId;
+        this.onmessage?.({ data: { type: "image-file-to-pattern/source-image-size", requestId, sourceImageSize } } as MessageEvent);
+        this.onmessage?.({
+          data: {
+            type: "image-file-to-pattern/success",
+            requestId,
+            width: 40,
+            height: 40,
+            colorCodes: Array.from({ length: 1_600 }, () => workerPatternCode),
+          },
+        } as MessageEvent);
+      }
+
+      terminate() {
+        this.terminated = true;
+      }
+    }
+
+    const createImageBitmapSpy = vi.fn(() => {
+      throw new Error("main thread should not decode");
+    });
+    vi.stubGlobal("Worker", FakePatternWorker);
+    vi.stubGlobal("OffscreenCanvas", function OffscreenCanvas() {});
+    vi.stubGlobal("createImageBitmap", createImageBitmapSpy);
+
+    try {
+      const onSourceImageSize = vi.fn();
+      const pattern = await imageFileToPattern(file, 52, onSourceImageSize, {
+        colorDistanceMode: "rgb-fast",
+        ditherMode: "ordered",
+        maxColorCount: 12,
+        smoothingLevel: 2,
+      });
+
+      expect(pattern.width).toBe(40);
+      expect(pattern.height).toBe(40);
+      expect(pattern.totalBeads).toBe(1_600);
+      expect(pattern.cells.every((cell) => cell.color === mardPalette[0])).toBe(true);
+      expect(onSourceImageSize).toHaveBeenCalledTimes(1);
+      expect(onSourceImageSize).toHaveBeenCalledWith(sourceImageSize);
+      expect(createImageBitmapSpy).not.toHaveBeenCalled();
+      expect(createdWorkers).toHaveLength(1);
+      expect(createdWorkers[0].url.toString()).toContain("image-file-to-pattern.worker.ts");
+      expect(createdWorkers[0].options).toEqual({ type: "module", name: "image-file-to-pattern" });
+      expect(createdWorkers[0].terminated).toBe(true);
+      expect(postedRequest).toMatchObject({
+        type: "image-file-to-pattern/process",
+        requestId: expect.any(String),
+        file,
+        longestEdge: 52,
+        options: {
+          colorDistanceMode: "rgb-fast",
+          ditherMode: "ordered",
+          maxColorCount: 12,
+          smoothingLevel: 2,
+        },
+      });
+      expect(postedRequest).not.toHaveProperty("onSourceImageSize");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("falls back to main-thread image processing when the worker requests fallback", async () => {
+    const width = 40;
+    const height = 40;
+    const pixels = new Uint8ClampedArray(width * height * 4);
+    pixels.fill(255);
+    const bitmap = { width, height, close: vi.fn() };
+    const context = {
+      imageSmoothingEnabled: false,
+      imageSmoothingQuality: "low",
+      filter: "none",
+      clearRect: vi.fn(),
+      drawImage: vi.fn(),
+      getImageData: vi.fn(() => ({ data: pixels })),
+    };
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => context),
+    };
+    const createdWorkers: FakeFallbackWorker[] = [];
+
+    class FakeFallbackWorker {
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onerror: ((event: Event) => void) | null = null;
+      terminated = false;
+
+      constructor() {
+        createdWorkers.push(this);
+      }
+
+      postMessage(message: unknown) {
+        const requestId = (message as { requestId: string }).requestId;
+        this.onmessage?.({ data: { type: "image-file-to-pattern/source-image-size", requestId, sourceImageSize: { width, height } } } as MessageEvent);
+        this.onmessage?.({ data: { type: "image-file-to-pattern/fallback", requestId, reason: "canvas-context-unavailable" } } as MessageEvent);
+      }
+
+      terminate() {
+        this.terminated = true;
+      }
+    }
+
+    vi.stubGlobal("Worker", FakeFallbackWorker);
+    vi.stubGlobal("OffscreenCanvas", function OffscreenCanvas() {});
+    vi.stubGlobal("createImageBitmap", vi.fn(async () => bitmap));
+    vi.stubGlobal("document", {
+      createElement: vi.fn(() => canvas),
+    });
+
+    try {
+      const onSourceImageSize = vi.fn();
+      const pattern = await imageFileToPattern({ type: "image/png" } as File, width, onSourceImageSize, {
+        colorDistanceMode: "rgb-fast",
+        ditherMode: "off",
+        smoothingLevel: 0,
+        maxColorCount: maxColorCountMax,
+      });
+
+      expect(createdWorkers).toHaveLength(1);
+      expect(createdWorkers[0].terminated).toBe(true);
+      expect(onSourceImageSize).toHaveBeenCalledTimes(1);
+      expect(onSourceImageSize).toHaveBeenCalledWith({ width, height });
+      expect(context.drawImage).toHaveBeenCalledWith(bitmap, 0, 0, width, height);
+      expect(pattern.width).toBe(width);
+      expect(pattern.height).toBe(height);
+      expect(bitmap.close).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("rejects and terminates when the image processing worker returns an error", async () => {
+    const createdWorkers: FakeErrorWorker[] = [];
+
+    class FakeErrorWorker {
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onerror: ((event: Event) => void) | null = null;
+      postMessage = vi.fn((message: unknown) => {
+        const requestId = (message as { requestId: string }).requestId;
+        this.onmessage?.({ data: { type: "image-file-to-pattern/error", requestId, message: "worker sampling failed" } } as MessageEvent);
+      });
+      terminate = vi.fn();
+
+      constructor() {
+        createdWorkers.push(this);
+      }
+    }
+
+    vi.stubGlobal("Worker", FakeErrorWorker);
+    vi.stubGlobal("OffscreenCanvas", function OffscreenCanvas() {});
+
+    try {
+      await expect(imageFileToPattern({ type: "image/png" } as File, 64)).rejects.toThrow("worker sampling failed");
+      expect(createdWorkers).toHaveLength(1);
+      expect(createdWorkers[0].terminate).toHaveBeenCalledTimes(1);
+      const request = createdWorkers[0].postMessage.mock.calls[0][0];
+      expect(request).toMatchObject({
+        type: "image-file-to-pattern/process",
+        requestId: expect.any(String),
+        longestEdge: 64,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("converts RGB to stable Oklab coordinates", () => {
     const black = toOklab({ r: 0, g: 0, b: 0 });
     const white = toOklab({ r: 255, g: 255, b: 255 });
@@ -128,11 +360,12 @@ describe("pattern logic", () => {
     expect(compositeRgbOverWhite(color, alpha)).toEqual(expected);
   });
 
-  it("summarizes cells by bead color count", () => {
+  it("summarizes cells by bead color count and skips no-bead cells", () => {
     const usage = summarizeCells([
       { x: 1, y: 1, color: palette[2] },
-      { x: 2, y: 1, color: palette[2] },
+      { x: 2, y: 1, color: null },
       { x: 1, y: 2, color: palette[0] },
+      { x: 2, y: 2, color: palette[2] },
     ]);
 
     expect(usage).toEqual([
@@ -151,11 +384,11 @@ describe("pattern logic", () => {
     expect(usage.map(({ color }) => color.code)).toEqual(["A1", "B1", "C2"]);
   });
 
-  it("builds pattern totals from cells", () => {
+  it("builds pattern bead totals from colored cells only", () => {
     const pattern = cellsToPattern(
       [
         { x: 1, y: 1, color: palette[0] },
-        { x: 2, y: 1, color: palette[1] },
+        { x: 2, y: 1, color: null },
       ],
       { width: 40, height: 40 },
     ) as { width?: number; height?: number; totalBeads: number; usage: unknown[]; size?: unknown };
@@ -163,8 +396,8 @@ describe("pattern logic", () => {
     expect(pattern.width).toBe(40);
     expect(pattern.height).toBe(40);
     expect(pattern.size).toBeUndefined();
-    expect(pattern.totalBeads).toBe(2);
-    expect(pattern.usage).toHaveLength(2);
+    expect(pattern.totalBeads).toBe(1);
+    expect(pattern.usage).toHaveLength(1);
   });
 
   it("exposes bounded adjustable dimensions and longest-edge presets", async () => {
@@ -186,7 +419,8 @@ describe("pattern logic", () => {
       return;
     }
 
-    expect(patternModule.normalizePatternDimensions({ width: 39, height: 101 })).toEqual({ width: 40, height: 100 });
+    expect(patternModule.normalizePatternDimensions({ width: 0, height: 101 })).toEqual({ width: 1, height: 100 });
+    expect(patternModule.normalizePatternDimensions({ width: 11, height: 100 })).toEqual({ width: 11, height: 100 });
     expect(patternModule.normalizePatternDimensions({ width: 60.7, height: 59.2 })).toEqual({ width: 61, height: 59 });
     expect(patternModule.normalizePatternDimensions({ width: Number.NaN, height: Number.POSITIVE_INFINITY })).toEqual({ width: 40, height: 40 });
   });
@@ -253,7 +487,7 @@ describe("pattern logic", () => {
     expect(pattern.cells).toHaveLength(1_600);
     expect(pattern.usage).toHaveLength(12);
     expect(pattern.usage.map(({ color }) => color.code)).not.toContain("A12");
-    expect(new Set(pattern.cells.map((cell) => cell.color.code)).size).toBe(12);
+    expect(new Set(pattern.cells.map((cell) => cell.color!.code)).size).toBe(12);
   });
 
   it("preserves cells already matched to retained colors when max color limiting remaps dropped colors", () => {
@@ -275,7 +509,7 @@ describe("pattern logic", () => {
     });
 
     expect(pattern.usage.map(({ color }) => color.code)).toEqual(["B1", "A1"]);
-    expect(pattern.cells.slice(0, 600).every((cell) => cell.color.code === "A1")).toBe(true);
+    expect(pattern.cells.slice(0, 600).every((cell) => cell.color!.code === "A1")).toBe(true);
   });
 
   it("keeps Floyd-Steinberg dithering deterministic without changing pattern coordinates", () => {
@@ -346,6 +580,8 @@ describe("pattern logic", () => {
     });
 
     vi.stubGlobal("createImageBitmap", vi.fn(async () => bitmap));
+    vi.stubGlobal("Worker", undefined);
+    vi.stubGlobal("OffscreenCanvas", undefined);
     vi.stubGlobal("document", {
       createElement: vi.fn(() => canvas),
     });
@@ -365,7 +601,7 @@ describe("pattern logic", () => {
       expect(context.clearRect).toHaveBeenCalledWith(0, 0, width, height);
       expect(context.drawImage).toHaveBeenCalledWith(bitmap, 0, 0, width, height);
       expect(context.getImageData).toHaveBeenCalledWith(0, 0, width, height);
-      expect(sampledPositions.map(({ x, y }) => pattern.cells[(y - 1) * width + (x - 1)]).map((cell) => `${cell.x},${cell.y}:${cell.color.code}`)).toEqual(
+      expect(sampledPositions.map(({ x, y }) => pattern.cells[(y - 1) * width + (x - 1)]).map((cell) => `${cell.x},${cell.y}:${cell.color!.code}`)).toEqual(
         sampledPositions.map(({ x, y, color }) => `${x},${y}:${color.code}`),
       );
       expect(pattern.totalBeads).toBe(width * height);
@@ -398,6 +634,8 @@ describe("pattern logic", () => {
     };
 
     vi.stubGlobal("createImageBitmap", vi.fn(async () => bitmap));
+    vi.stubGlobal("Worker", undefined);
+    vi.stubGlobal("OffscreenCanvas", undefined);
     vi.stubGlobal("document", {
       createElement: vi.fn(() => canvas),
     });
@@ -418,6 +656,63 @@ describe("pattern logic", () => {
       expect(pattern.height).toBe(patternHeight);
       expect(pattern.totalBeads).toBe(patternWidth * patternHeight);
       expect(pattern.cells).toHaveLength(patternWidth * patternHeight);
+      expect(bitmap.close).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("closes decoded bitmaps when canvas context creation fails", async () => {
+    const bitmap = { width: 40, height: 40, close: vi.fn() };
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => null),
+    };
+
+    vi.stubGlobal("createImageBitmap", vi.fn(async () => bitmap));
+    vi.stubGlobal("Worker", undefined);
+    vi.stubGlobal("OffscreenCanvas", undefined);
+    vi.stubGlobal("document", {
+      createElement: vi.fn(() => canvas),
+    });
+
+    try {
+      await expect(imageFileToPattern({ type: "image/png" } as File, 40)).rejects.toThrow("Could not create canvas context.");
+      expect(bitmap.close).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("closes decoded bitmaps when image data sampling fails", async () => {
+    const bitmap = { width: 40, height: 40, close: vi.fn() };
+    const context = {
+      imageSmoothingEnabled: false,
+      imageSmoothingQuality: "low",
+      filter: "none",
+      clearRect: vi.fn(),
+      drawImage: vi.fn(),
+      getImageData: vi.fn(() => {
+        throw new Error("sampling failed");
+      }),
+    };
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => context),
+    };
+
+    vi.stubGlobal("createImageBitmap", vi.fn(async () => bitmap));
+    vi.stubGlobal("Worker", undefined);
+    vi.stubGlobal("OffscreenCanvas", undefined);
+    vi.stubGlobal("document", {
+      createElement: vi.fn(() => canvas),
+    });
+
+    try {
+      await expect(imageFileToPattern({ type: "image/png" } as File, 40)).rejects.toThrow("sampling failed");
+      expect(context.drawImage).toHaveBeenCalledWith(bitmap, 0, 0, 40, 40);
       expect(bitmap.close).toHaveBeenCalledTimes(1);
     } finally {
       vi.unstubAllGlobals();
