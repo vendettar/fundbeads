@@ -17,7 +17,7 @@ Render the generated pattern in a high-contrast grid that supports practical bea
 - Overlay the MARD color code inside each cell.
 - Use readable text color against both dark and light bead colors.
 - Add numbered X and Y axes on all four borders: top, bottom, left, and right.
-- Number axes from `1` through the selected grid size.
+- Number X axes from `1` through the generated pattern width and Y axes from `1` through the generated pattern height.
 - Draw stronger counting lines every 5 or 10 cells.
 - Fit the full generated chart into the pattern viewport by default.
 - Provide zoom controls so users can inspect dense grids without making default scrollbars the primary experience.
@@ -40,7 +40,7 @@ Render the generated pattern in a high-contrast grid that supports practical bea
 
 ## Verification
 
-- Generate each supported resolution and confirm all four axes reach the final number.
+- Generate representative supported output dimensions and confirm all four axes reach the final width or height.
 - Confirm cell labels remain legible on black, white, yellow, blue, and red bead colors.
 - Confirm every 5th or 10th line is visually stronger than normal grid lines.
 - Confirm large grids fit by default without grid scrollbars.
@@ -55,4 +55,4 @@ Render the generated pattern in a high-contrast grid that supports practical bea
 
 ## Decision Log
 
-Required if rendering moves from DOM to canvas, if axes are removed or changed, or if supported grid sizes change.
+Required if rendering moves from DOM to canvas, if axes are removed or changed, or if supported output dimensions change.

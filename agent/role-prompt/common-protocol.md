@@ -53,7 +53,7 @@ All Fundbeads roles must follow this protocol before applying role-specific rule
 - The active MARD palette is the built-in static `mard-221` dataset.
 - The supported output dimensions are integer `width` and `height` derived from source aspect ratio and selected longest edge; the longest edge is clamped to `40..100`, and the shorter side may be below `40` but not below `1`.
 - Pattern cells use 1-based `x` and `y` coordinates.
-- Color usage totals are derived from generated pattern cells, not from UI text.
+- Color usage totals are derived from non-null cells in the current effective pattern, not from UI text.
 - Docker and deployment assets must serve static frontend output only.
 - `frontend/src/design-theme.generated.css` is generated from `DESIGN.md`; do not hand-edit it.
 

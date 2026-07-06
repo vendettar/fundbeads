@@ -1,14 +1,30 @@
-# 009 IndexedDB Local Pattern Persistence Infrastructure
+# [COMPLETED] 009 IndexedDB Local Pattern Persistence Infrastructure
 
 ## Status
 
-Ready for implementation. This instruction defines the local persistence foundation only. It does not implement user registration, login, backend APIs, server storage, or cloud sync.
+Completed and verified. This instruction defines the local persistence foundation only. It does not implement user registration, login, backend APIs, server storage, cloud sync, source-image saving, recent history UI, draft UI, or offline library UI.
+
+## Completion
+
+- Completed by: Codex Worker, Batch 5
+- Date: 2026-07-06
+- Follow-up audit verification: 2026-07-07, including complete-coded persistence contract checks and non-E2E `pnpm check`
+- Commands:
+  - `pnpm --dir frontend test:run local-pattern-db.test.ts i18n-theme.test.ts`
+  - `pnpm check && git diff --exit-code -- frontend/src/design-theme.generated.css`
+  - `git diff --check`
+  - `rg -n "fetch\\s*\\(|XMLHttpRequest|sendBeacon|https?://|telemetry|cdn" frontend/src/local-pattern-db.ts frontend/test`
+  - `rg -n "password|session|token|auth|login|email" frontend/src/local-pattern-db.ts frontend/test`
+  - `rg -n "fetch\\s*\\(|XMLHttpRequest|sendBeacon|https?://|telemetry|cdn" frontend/src/local-pattern-db.ts`
+  - `rg -n "password|session|token|auth|login|email" frontend/src/local-pattern-db.ts`
 
 ## Goal
 
-Add a browser-local IndexedDB persistence layer for Fundbeads so future features can save and restore generated bead patterns, drafts, recent history, offline libraries, export staging data, and explicitly saved source images.
+Add a browser-local IndexedDB persistence layer for Fundbeads so future features can save and restore generated bead patterns, drafts, recent history, offline libraries, and export staging data.
 
 This infrastructure must preserve Fundbeads' local-first image-processing model. IndexedDB is a local UX and cache layer, not an authority source for accounts or server-owned records.
+
+Source image persistence is intentionally not shipped by this instruction. Any future source-image blob storage must be explicit, bounded, and covered by a separate approved instruction.
 
 ## Role Team
 
@@ -18,8 +34,8 @@ Use the Fundbeads role prompts before implementation. If subagents are available
 - `agent/role-prompt/business-analyst-role.md`: confirm this is infrastructure for planned persistence features, not a hidden feature shipment.
 - `agent/role-prompt/pattern-contract-role.md`: own persisted pattern shape, palette/version contracts, cell order, usage counts, and migration behavior.
 - `agent/role-prompt/palette-data-role.md`: verify persisted records carry active palette identity and do not freeze stale MARD data silently.
-- `agent/role-prompt/security-role.md`: review browser-local storage, optional source image blobs, privacy copy, account-sync boundaries, and no upload guarantees.
-- `agent/role-prompt/performance-role.md`: review storage growth, quota handling, pruning, object URL lifecycle, and `78x78` pattern size cost.
+- `agent/role-prompt/security-role.md`: review browser-local storage, source image privacy boundaries, account-sync boundaries, and no upload guarantees.
+- `agent/role-prompt/performance-role.md`: review storage growth, quota handling, pruning, object URL lifecycle, and bounded pattern size cost.
 - `agent/role-prompt/platform-role.md`: verify static deployment remains unchanged and no backend/database/runtime secret boundary is introduced.
 - `agent/role-prompt/qa-role.md`: define tests for schema normalization, blocked IndexedDB, quota behavior, old schema invalidation, and no-network guards.
 - `agent/role-prompt/documentation-steward-role.md`: update steady-state docs only for infrastructure that actually ships.
@@ -57,7 +73,7 @@ Do not copy XImg business concepts, API contracts, provider fields, prompt field
 - Preferences use optional browser `localStorage` only for language, theme, and interface style ids.
 - Uploaded images, generated patterns, object URLs, and usage counts currently live in React/browser memory only.
 - The active palette is the built-in static `mard-221` dataset.
-- Supported square presets are `52x52`, `64x64`, and `78x78`; adjustable pattern dimensions are `width` and `height`, each currently bounded to `40..100`.
+- Supported presets are longest-edge presets `52`, `64`, and `78`; adjustable pattern dimensions are derived from source image aspect ratio, with longest edge bounded to `40..100` and the shorter side allowed below `40` but not below `1`.
 - Current pattern generation contracts include:
   - `BeadColor`
   - `Pattern`
@@ -78,7 +94,7 @@ Introduce IndexedDB infrastructure that can support these upcoming features:
 - Saved drafts.
 - Offline pattern library.
 - Export staging cache for multiple generated patterns.
-- User-explicit saving of original source images and/or generated pattern data.
+- User-explicit saving of generated pattern data.
 - Future logged-in account sync where local records can be associated with user-owned remote records.
 
 This instruction should create the persistence foundation and minimal contract tests. It should not add a full user-visible history library unless that is explicitly selected in a later instruction.
@@ -150,11 +166,9 @@ Recommended exported primitives:
 export const localPatternDbName = "fundbeads-pattern-store";
 export const localPatternDbVersion = 1;
 export const maxLocalPatternRecords = 100;
-export const maxLocalSourceImageBytes = 100 * 1024 * 1024;
+export const maxLocalPatternListPageSize = 100;
 
 export type LocalPatternRecord = { ... };
-export type LocalPatternDraft = { ... };
-export type LocalPatternSourceImage = { ... };
 
 export function canUseLocalPatternDb(): boolean;
 export function normalizeLocalPatternRecord(value: unknown): LocalPatternRecord | null;
@@ -181,24 +195,22 @@ Recommended `LocalPatternRecord` fields:
 - `updatedAt`: epoch milliseconds.
 - `title`: optional user-facing title.
 - `sourceFileName`: optional original filename.
-- `width`: persisted pattern width, currently normalized to `40..100`.
-- `height`: persisted pattern height, currently normalized to `40..100`.
+- `width`: persisted pattern width, normalized to `1..100`, with longest edge at least `40`.
+- `height`: persisted pattern height, normalized to `1..100`, with longest edge at least `40`.
 - `paletteSlug`: `mard-221`.
 - `paletteVersion`: source palette version from `mard221Palette.version`.
-- `cellCodes`: row-major array of MARD codes, length must equal `width * height`.
-- `usage`: array of `{ code, count }`, sum must equal `width * height`.
-- `totalBeads`: must equal `width * height`.
+- `cellCodes`: for this v1 complete-coded record, row-major array of MARD codes, length must equal `width * height`.
+- `usage`: for this v1 complete-coded record, array of `{ code, count }`, sum must equal `width * height`.
+- `totalBeads`: for this v1 complete-coded record, must equal `width * height`.
 - `usedColorCount`: must equal `usage.length`.
 - `previewObjectUrl`: forbidden in persistence. Object URLs are runtime-only.
-- `sourceImageId`: optional reference to a separately stored source image blob.
-- `sourceImageSaved`: boolean, true only when the user explicitly chose to save the source image.
 - `draftState`: optional future field for crop/position/export settings, versioned separately if needed.
 - `ownerScope`: `"anonymous-local"` for this instruction.
 - `localRecordId`: same as or derived from `id`, reserved for future sync mapping.
 - `remoteRecordId`: optional future field; must be absent or `null` until sync exists.
 - `syncStatus`: `"local-only"` for this instruction.
 
-Do not persist redundant RGB values for every cell. Persist cell codes and reconstruct display colors from the current palette when rendering. If a future palette migration requires snapshot colors, that must be a separate decision.
+This compact v1 local record represents complete coded patterns only. Effective edited patterns with no-bead cells (`PatternCell.color = null`) are valid runtime `Pattern` values, but require a future schema that can represent empty cells before they can be persisted. Do not persist redundant RGB values for every cell. Persist cell codes and reconstruct display colors from the current palette when rendering. If a future palette migration requires snapshot colors, that must be a separate decision.
 
 ## Source Image Blob Policy
 
@@ -207,11 +219,13 @@ Default behavior:
 - Do not store uploaded source images.
 - Do not store generated preview object URLs.
 - Do not automatically persist image blobs during normal generation.
+- Do not include source-image blob references in `LocalPatternRecord`.
+- Records that claim a saved source image are invalid for the shipped Batch 009 contract.
 
 Explicit-save behavior for future instructions:
 
 - A source image blob may be stored only after the user explicitly chooses to save it.
-- Store source image metadata separately from the pattern:
+- A future implementation must define source image metadata separately from the pattern, for example:
   - `id`
   - `patternId`
   - `fileName`
@@ -219,10 +233,7 @@ Explicit-save behavior for future instructions:
   - `sizeBytes`
   - `createdAt`
   - `blob`
-- Allowed MIME types remain JPG and PNG.
-- Source image storage must count toward a max byte budget.
-- Deleting a pattern must also delete its saved source image unless a future shared-asset contract says otherwise.
-- Object URLs created from stored blobs must be revoked when no longer active.
+- Allowed MIME types, byte budgets, pruning behavior, deletion semantics, and object URL lifecycle must be specified by that future instruction.
 
 ## Future Account and Sync Boundary
 
@@ -244,14 +255,12 @@ Future account integration should follow these boundaries:
 Define explicit bounds in source:
 
 - Maximum pattern records, recommended starting value: `100`.
-- Maximum source-image bytes, recommended starting value: `100 MiB`.
-- Maximum preview thumbnail bytes if thumbnails are added later.
 - Maximum list page size.
+- Maximum source-image bytes and maximum preview thumbnail bytes only if those stores are added by a future instruction.
 
 Pruning behavior:
 
 - Pattern records should prune oldest records first when exceeding count limits.
-- Source image blobs should prune only records that are safe to delete under the current explicit-save contract.
 - Quota errors should attempt safe pruning and retry once.
 - If retry fails, return a typed failure result and keep the app usable.
 - Never silently delete a user-pinned/saved record unless the contract explicitly allows it.
@@ -265,7 +274,7 @@ Reading a local pattern record must validate:
 - Every code exists in the active palette.
 - `usage` counts are positive integers.
 - `usage` sum equals `totalBeads`.
-- `totalBeads === width * height`.
+- `totalBeads === width * height` for this v1 complete-coded record.
 - `usedColorCount === usage.length`.
 - `paletteSlug === "mard-221"` for this implementation.
 - `paletteVersion` is compatible with the active `mard221Palette.version`.
@@ -299,9 +308,9 @@ Docs and UI copy must be precise: "saved locally in this browser" is acceptable;
 - Do not block pattern generation on persistence success.
 - Keep local persistence failures non-fatal.
 - Listing history must be paginated.
-- Blob reads must be lazy; do not load source image blobs when listing metadata.
-- Object URLs from stored blobs must be tracked and revoked.
-- `78x78` patterns must remain responsive when saved, listed, loaded, and reconstructed.
+- Future blob reads must be lazy; do not add source image blob loading to metadata listing in this instruction.
+- Future object URLs from stored blobs must be tracked and revoked.
+- Bounded patterns up to `100x100` must remain responsive when saved, listed, loaded, and reconstructed.
 
 ## UI Requirements
 
@@ -324,7 +333,7 @@ Preferred first implementation:
 - Keep store names stable and documented.
 - Use pure normalizer helpers for stored data so most contract tests do not need a browser IndexedDB runtime.
 - Keep all local persistence code isolated from `pattern.ts` matching logic.
-- Convert between `Pattern` and `LocalPatternRecordInput` in a mapper function rather than spreading UI state directly into storage.
+- Convert between a complete-coded `Pattern` and `LocalPatternRecordInput` in a mapper function rather than spreading UI state directly into storage.
 - Keep storage functions latest-wins friendly; future autosave should not resurrect stale pattern state.
 - Do not change `imageFileToPattern`, MARD matching, usage summarization, grid rendering, zoom, i18n, theme, or interface style behavior unless directly required by tests.
 
@@ -335,7 +344,7 @@ Use TDD. Add failing tests before implementation and verify they fail for the ex
 Required unit tests:
 
 - Exports database name, schema version, and storage limit constants.
-- Normalizes a valid `LocalPatternRecord`.
+- Normalizes a valid complete-coded `LocalPatternRecord`.
 - Rejects unsupported schema versions.
 - Rejects unsupported width or height values.
 - Rejects records whose `cellCodes.length` does not equal `width * height`.
@@ -346,6 +355,7 @@ Required unit tests:
 - Reconstructs a `Pattern` from a valid local record using active palette colors.
 - Does not persist object URLs.
 - Does not require source image blobs for normal pattern records.
+- Rejects records that claim source image blob references under the shipped Batch 009 contract.
 - Safe storage functions degrade when IndexedDB is unavailable.
 
 Required integration tests if an IndexedDB test runtime is added:
@@ -356,7 +366,7 @@ Required integration tests if an IndexedDB test runtime is added:
 - Clear all records.
 - Prune oldest records beyond `maxLocalPatternRecords`.
 - Handle quota failure by returning a typed result or pruning and retrying once.
-- Stored source image blob path remains opt-in and bounded.
+- Source image blob persistence remains unimplemented and must not appear in shipped local pattern records.
 
 Required source guards:
 
@@ -402,7 +412,7 @@ If `dexie` or `fake-indexeddb` is added, verify lockfile changes are intentional
 - A typed local IndexedDB persistence module exists.
 - Stored pattern records are compact, versioned, bounded, and validated.
 - Normal pattern generation still works when IndexedDB is unavailable or blocked.
-- Source image blob persistence is opt-in only, or left as an explicit future extension.
+- Source image blob persistence is left as an explicit future extension.
 - Future account sync fields are reserved without implementing login or remote sync.
 - Tests cover normalization, pattern conversion, safety guards, and blocked/unavailable storage behavior.
 - Docs distinguish shipped persistence infrastructure from future history, draft, offline library, export cache, and account-sync features.

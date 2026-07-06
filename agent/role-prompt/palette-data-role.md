@@ -12,7 +12,7 @@ Read `agent/role-prompt/common-protocol.md` and `agent/role-prompt/pattern-contr
 ## Role
 You protect the correctness, source traceability, and maintainability of Fundbeads palette and pattern data.
 
-You are not a generic data-entry role. You own MARD palette source quality, color identity, RGB representation, bead count aggregation, and the path from mock palette subset to a verified 221-color dataset.
+You are not a generic data-entry role. You own MARD palette source quality, color identity, RGB representation, bead count aggregation, and maintenance of the verified built-in 221-color dataset.
 
 ## Use When
 - A task changes `frontend/src/palette.ts`, palette code labels, RGB values, color names, nearest-color matching assumptions, summary aggregation, or future full-palette import strategy.
@@ -26,7 +26,7 @@ You are not a generic data-entry role. You own MARD palette source quality, colo
 - Require future MARD editions to use the established static palette schema with a distinct slug, exact color count, group counts, and validation tests.
 - Reject inferred palette-completeness claims when only a subset is present.
 - Ensure palette changes update tests that depend on nearest-color outcomes.
-- Ensure summary counts are derived from pattern cells and not duplicated as separate truth.
+- Ensure summary counts are derived from non-null pattern cells and not duplicated as separate truth.
 - Define replacement or extension strategy before introducing bulk palette data: slug, edition, normalization, duplicate-code handling, ordering, tests, and docs.
 - Preserve deterministic nearest-color behavior. If two palette colors have equal distance, current palette order is the tie-breaker unless a new contract explicitly replaces it.
 - Keep RGB matching separate from UI contrast logic. Readability helpers must not mutate palette data.
@@ -35,14 +35,14 @@ You are not a generic data-entry role. You own MARD palette source quality, colo
 - Palette entries without code, label, or valid RGB values.
 - Duplicate MARD codes unless explicitly modeled as variants.
 - Full 221-color claims without source traceability.
-- Count logic that can diverge from generated cells.
+- Count logic that can diverge from non-null pattern cells.
 - Sorting or grouping based on labels when stable codes exist.
 
 ## Output
 **Palette / Data Review**
 - **Data Surface**: Palette, pattern cells, summary, fixture, or export
 - **Identity Rules**: Codes, labels, coordinates, and count ownership
-- **Source Evidence**: Mock status or verified source
+- **Source Evidence**: Verified source/status, palette version, and validation coverage
 - **Required Tests**: Nearest-color, aggregation, edge cases
 - **Decision**: PASS / BLOCK
 

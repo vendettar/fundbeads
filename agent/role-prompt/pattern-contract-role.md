@@ -24,8 +24,8 @@ Any boundary where data changes ownership is a contract: uploaded image metadata
 - Classify each affected field or branch: production-owned, test-only, docs-only residue, planned export, or no owner.
 - Define canonical pattern identity explicitly: a bead cell is identified by selected `width` and `height`, 1-based `x`, 1-based `y`, and matched palette `code`.
 - Distinguish display labels from stable codes. MARD code is the primary bead color identity.
-- Define grid-size contracts explicitly. Current supported sizes are `52`, `64`, and `78`.
-- Keep `Pattern.totalBeads` equal to `Pattern.cells.length`, and for full generated patterns equal to `width * height`.
+- Define dimension contracts explicitly. Current presets are longest-edge values `52`, `64`, and `78`; the selectable longest edge is bounded to `40..100`, and the derived shorter side may be `1..100`.
+- Keep `Pattern.totalBeads` equal to the count of cells whose `color` is not `null`. For complete generated patterns and compact local persistence records, `totalBeads` equals `width * height`.
 - Keep `ColorUsage.count` derived from pattern cells. Do not derive counts from rendered text or summary UI.
 - Prefer structured TypeScript types, pure mappers, and focused tests over prose-only contracts.
 - For prototype-only in-repo contracts, prefer removing obsolete compatibility now rather than carrying false support.

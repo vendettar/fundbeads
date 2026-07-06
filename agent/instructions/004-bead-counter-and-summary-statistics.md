@@ -31,14 +31,14 @@ Show the exact bead quantities needed for the generated pattern.
 
 ## Implementation Notes
 
-- Derive counts from the generated pattern cells, not from a separate processing pass.
+- Derive counts from non-null cells in the current effective pattern, not from a separate mutable count source.
 - Keep summary logic deterministic and unit-testable.
 - Preserve compact layout so summaries remain scannable for many colors.
-- `Pattern.totalBeads` should equal `Pattern.cells.length`; for complete generated patterns it should equal `size * size`.
+- `Pattern.totalBeads` should equal the count of cells whose `color` is not `null`; for complete generated patterns it should equal `width * height`.
 
 ## Verification
 
-- Generate a pattern and confirm total beads equals `52 * 52`, `64 * 64`, or `78 * 78`.
+- Generate a pattern and confirm total beads equals `width * height` for complete generated output, including aspect-ratio dimensions derived from longest-edge presets `52`, `64`, and `78`.
 - Confirm the sum of summary counts equals the total bead count.
 - Confirm repeated colors are combined into a single summary row.
 - Confirm color swatches match the grid cell backgrounds for the same code.

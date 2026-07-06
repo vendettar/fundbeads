@@ -10,12 +10,12 @@ Add a compact toolbar on the main generated pattern area so users can manually r
 
 - Paint color
 - Pick color
-- Erase to MARD H1 white
+- Erase to no-bead
 - Replace color
 
-The edited chart must remain a valid Fundbeads `Pattern`: every cell has one MARD 221 color, usage counts are recomputed from effective cells, and processing stays browser-local.
+The edited chart must remain a valid Fundbeads `Pattern`: colored cells use MARD 221 colors, erased cells are represented as no-bead cells, usage counts are recomputed from effective cells, and processing stays browser-local.
 
-This instruction is an implementation task, not a product-direction expansion. If implementation pressure suggests persistence UI, export changes, crop/framing work, blank cells, advanced selection tools, or a backend, stop and return to Top for a new scoped instruction.
+This instruction is an implementation task, not a product-direction expansion. If implementation pressure suggests persistence UI, crop/framing work, advanced selection tools, or a backend, stop and return to Top for a new scoped instruction.
 
 ## Role Team
 
@@ -86,7 +86,7 @@ Add manual editing after a pattern exists:
 - The toolbar should sit in the pattern grid header or as a safe sticky overlay inside the grid section. It must not hide the first row, axes, zoom controls, or cell labels at the default fit view.
 - Users can choose a MARD 221 color and paint cells.
 - Users can pick an existing cell color from the chart and make it the active paint color.
-- Users can erase cells to MARD `H1` white (`#ffffff`) without creating empty/no-bead cells.
+- Users can erase cells to no-bead empty cells.
 - Users can replace one effective MARD color with another across the current pattern.
 - The summary under the original-image rail and the detailed usage list must update from the edited/effective cells.
 - Manual edits are session state only in this instruction. Persistence can store edited cells later through the existing local persistence infrastructure, but this instruction must not add new persistence UI.
@@ -126,13 +126,13 @@ Keep a neutral view mode so users can inspect, zoom, scroll, copy, and highlight
 - After a successful pick, switch back to paint mode so the user can immediately continue editing.
 - Picking does not change the pattern and must not create an undo entry.
 
-### Erase To White
+### Erase To No-Bead
 
 - Active tool label: `擦除` / erase.
-- Clicking or dragging on a cell sets that cell's effective color to MARD `H1` white (`#ffffff`).
-- Erase must not create an empty cell, transparent cell, blank bead, or "no bead" state.
-- `totalBeads` must remain `width * height`.
-- Erasing a cell that is already effectively `H1` is a no-op and should not create history noise.
+- Clicking or dragging on a cell sets that cell's effective color to no-bead (`PatternCell.color = null`).
+- No-bead cells render as empty cells and do not display a MARD code.
+- `totalBeads` must decrease by the number of newly erased colored cells.
+- Erasing a cell that is already effectively no-bead is a no-op and should not create history noise.
 - One pointer stroke should be one undoable transaction.
 
 ### Replace Color
@@ -159,14 +159,14 @@ Undo/redo/reset may live in the same grid toolbar. Reset should be disabled when
 
 ## Editing Data Contract
 
-Do not mutate generated pattern cells as the only source of truth.
+Do not mutate base pattern cells as the only source of truth.
 
 Recommended model:
 
 ```ts
 export type PatternEditTool = "view" | "paint" | "pick" | "erase" | "replace";
 
-export type PatternEditOverrideMap = Record<number, string>;
+export type PatternEditOverrideMap = Record<number, string | null>;
 
 export type PatternEditState = {
   basePattern: Pattern;
@@ -182,17 +182,18 @@ Rules:
 
 - `basePattern` is the generated pattern before manual edits.
 - Override keys are zero-based row-major cell indexes.
-- Override values are MARD color codes, not copied RGB objects.
+- Override values are MARD color codes or `null` for no-bead, not copied RGB objects.
 - Override indexes must be integers within `0..basePattern.cells.length - 1`.
 - The effective pattern is reconstructed by applying overrides to `basePattern.cells`.
 - Effective cells must keep 1-based `x` and `y` coordinates.
 - Effective cells must stay row-major.
 - Effective usage must be recomputed with `summarizeCells` or an equivalent tested helper.
-- `Pattern.totalBeads` must always equal effective cell count.
-- For complete generated charts, effective cell count must equal `width * height`.
+- `Pattern.totalBeads` must equal the count of effective cells with a non-null color.
+- For complete generated charts before erasing, `Pattern.totalBeads` equals `width * height`.
+- After erasing cells to no-bead, `Pattern.totalBeads` can be less than `width * height`.
 - Unknown color codes must be rejected before they can enter edit state.
 - If an override sets a cell to the same color as the base cell, remove that override.
-- Manual edit state should store color codes and transaction diffs, not copied `BeadColor` objects for every edited cell.
+- Manual edit state should store color codes, `null` no-bead overrides, and transaction diffs, not copied `BeadColor` objects for every edited cell.
 - The helper must resolve color codes back through the active palette when constructing effective cells.
 - Invalid base patterns, unknown override codes, and out-of-range override indexes should fail loudly in tests rather than silently producing corrupt patterns.
 
@@ -288,7 +289,6 @@ Do not implement these in this instruction:
 
 - Source-image crop, zoom, drag-to-frame, or fixed square viewport mode.
 - Magic wand, flood fill, lasso, rectangular selection, multi-select, layers, or masks.
-- Empty/no-bead cells.
 - Blank canvas creation.
 - Server save, upload, account sync, or cloud storage.
 - New palette data, remote palette loading, or MARD edition switching.
@@ -320,14 +320,14 @@ Required `frontend/test/pattern-edit.test.ts` coverage:
 - Painting a cell to its base color removes the override.
 - Paint and erase reject out-of-range cell indexes.
 - Picking a color updates active color in UI/controller tests without changing pattern data.
-- Erasing a painted cell sets it to MARD `H1` white.
-- Erasing an unedited non-H1 cell sets it to MARD `H1` white.
-- Erasing an already effective H1 cell is a no-op.
+- Erasing a painted cell sets it to no-bead.
+- Erasing an unedited colored cell sets it to no-bead.
+- Erasing an already effective no-bead cell is a no-op.
 - Replace color changes every effective source-code cell to the target code.
 - Replace removes overrides when the target color equals that cell's base color.
 - Replace color is a no-op or rejected when source and target are equal.
 - Replace color is rejected for unknown MARD codes.
-- Effective usage counts and `totalBeads` recompute after paint, erase, and replace.
+- Effective usage counts and `totalBeads` recompute after paint, erase, and replace, excluding no-bead cells.
 - Effective cells remain row-major with 1-based coordinates.
 - Undo and redo work for paint strokes, erase strokes, replace, and reset.
 - Undo stack is bounded and redo clears after a new edit.
@@ -349,7 +349,7 @@ Manual verification for the implementer:
 - Drag paint and drag erase across several cells, then undo each stroke with one action.
 - Confirm the compact summary and detailed usage list update immediately.
 - Confirm zoom, scroll, and color focus highlighting still work.
-- Confirm no cells become blank and total bead count stays unchanged.
+- Confirm erased cells become no-bead empty cells and total bead count decreases accordingly.
 - Change matching mode, smoothing, max color count, or longest edge and confirm the regenerated pattern starts with no stale manual edits.
 
 ## Documentation Updates
@@ -391,7 +391,7 @@ The second search is expected to return nothing for this instruction unless a fu
 - The generated pattern grid has a main-area editing toolbar.
 - Users can paint cells with a valid MARD 221 color.
 - Users can pick a cell color into the active paint color.
-- Users can erase cells to MARD `H1` white without creating blank cells.
+- Users can erase cells to no-bead empty cells.
 - Users can replace one effective color with another across the pattern.
 - Undo, redo, and reset protect users from accidental edits.
 - Effective `Pattern.cells`, `usage`, and `totalBeads` reflect manual edits.
@@ -410,7 +410,7 @@ Date: 2026-07-06
 
 Implemented:
 
-- Added pure pattern editing helpers in `frontend/src/pattern-edit.ts` for base/effective pattern state, paint, erase to MARD `H1` white, replace, undo, redo, reset, override validation, and bounded history.
+- Added pure pattern editing helpers in `frontend/src/pattern-edit.ts` for base/effective pattern state, paint, erase to no-bead, replace, undo, redo, reset, override validation, and bounded history.
 - Wired the generated grid to render effective pattern state and added grid-area edit controls for view, paint, pick, erase, replace, undo, redo, reset, active color, and replace source/target swatches.
 - Added delegated pointer editing with stroke-level transactions, skipped-cell interpolation, primary-pointer guards, pointer capture release, leave/cancel/lost-capture cleanup, and unmount cleanup.
 - Updated localized labels, focused unit/source tests, and steady-state docs for session-only manual editing and effective-cell usage counts.

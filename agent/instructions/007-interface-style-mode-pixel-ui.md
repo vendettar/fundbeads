@@ -13,9 +13,9 @@ Use the Fundbeads role prompts before implementation. If the runtime supports su
 - `agent/role-prompt/top-role.md`: confirm scope, role routing, and boundaries.
 - `agent/role-prompt/ui-designer-role.md`: own visual direction, control placement, responsive behavior, accessibility, and no-overlap checks.
 - `agent/role-prompt/worker-role.md`: implement the approved instruction in the smallest coherent file set.
-- `agent/role-prompt/pattern-contract-role.md`: verify that pattern, palette, grid-size, and count contracts are untouched.
+- `agent/role-prompt/pattern-contract-role.md`: verify that pattern, palette, output-dimension, and count contracts are untouched.
 - `agent/role-prompt/security-role.md`: verify no image upload, telemetry, remote font, remote CSS, or remote theme loading is introduced.
-- `agent/role-prompt/performance-role.md`: verify the pixel style does not add expensive render work to the `78x78` grid path.
+- `agent/role-prompt/performance-role.md`: verify the pixel style does not add expensive render work to large grid paths.
 - `agent/role-prompt/qa-role.md`: define and run focused checks for style selection, i18n parity, storage fallback, and build safety.
 - `agent/role-prompt/reviewer-role.md`: final review before marking this instruction complete.
 
@@ -26,9 +26,9 @@ Top owns orchestration. Worker owns implementation. Specialty agents own focused
 When subagents are available, dispatch the work in this order:
 
 1. **UI Designer**: review the intended pixel visual direction, toolbar ergonomics, responsive risks, accessibility, and no-overlap constraints. Output must be actionable UI constraints, not code.
-2. **Pattern Contract Guardian**: confirm the implementation plan does not alter pattern, palette, grid-size, count, or MARD 221 contracts. Output PASS/BLOCK with watched files.
+2. **Pattern Contract Guardian**: confirm the implementation plan does not alter pattern, palette, output-dimension, count, or MARD 221 contracts. Output PASS/BLOCK with watched files.
 3. **Security Reviewer**: confirm the plan uses no remote assets, no upload path, no telemetry, and only stores the interface style id. Output PASS/BLOCK.
-4. **Performance Reviewer**: confirm pixel style effects are CSS-only and bounded, especially for `78x78` grid rendering and palette showcase rendering. Output PASS/BLOCK.
+4. **Performance Reviewer**: confirm pixel style effects are CSS-only and bounded, especially for large grid rendering and palette showcase rendering. Output PASS/BLOCK.
 5. **QA / Test Engineer**: specify exact tests and verification commands for the new interface style contract. Output required test additions.
 6. **Worker**: implement only after the above plan checks are clear. Use TDD: add failing tests first, verify red, implement, verify green.
 7. **Reviewer**: perform final implementation review against this instruction, docs, tests, local-only guarantees, and changed files.
@@ -126,7 +126,7 @@ Define these contracts explicitly:
 - `InterfaceStyleProvider` exposes `{ interfaceStyle, setInterfaceStyle }`.
 - `useInterfaceStyle` throws a clear error if used outside the provider.
 - The provider should mirror the current `ThemeProvider` storage and normalization patterns.
-- The style selector must not affect generated pattern data, palette matching, summary counts, grid size, object URLs, image decoding, or local-only processing.
+- The style selector must not affect generated pattern data, palette matching, summary counts, output dimensions, object URLs, image decoding, or local-only processing.
 - The style selector should use short display labels such as `MD` and `PX` in the toolbar to avoid wrapping in long locales.
 
 ## UI Requirements
@@ -141,7 +141,7 @@ Define these contracts explicitly:
 - Preserve the drag/drop workspace, original image preview, top status row, MARD 221 palette showcase, and color summary.
 - Preserve full-grid fit behavior and zoom controls.
 - Preserve readable bead-cell codes and all four axes.
-- In pixel mode, do not make the `78x78` grid harder to inspect.
+- In pixel mode, do not make large generated grids harder to inspect.
 
 ## CSS Requirements
 
@@ -198,14 +198,14 @@ The only persistence allowed for this instruction is the chosen interface style 
 
 This instruction must not change:
 
-- `GridSize` support: `52`, `64`, `78`
+- Output-dimension support: selected longest edge is clamped to `40..100`, preset options include `52`, `64`, and `78`, and the shorter side may be `1..100` after aspect-ratio derivation.
 - `BeadColor`
 - `Pattern`
 - `PatternCell`
 - `ColorUsage`
 - MARD palette codes, labels, RGB values, or group counts
 - `mard-221` slug, data shape, or active palette identity
-- RGB Euclidean matching logic
+- Local color-distance matching and dither behavior
 - transparent PNG behavior
 - color usage aggregation
 - total bead count calculation
@@ -259,7 +259,7 @@ Manually verify at minimum:
 - invalid stored interface style falls back to `modern`
 - blocked storage still lets the app render
 - upload, drag/drop, resolution switching, pattern generation, summary counts, and zoom still work
-- `78x78` grid remains usable in both `modern` and `pixel`
+- Large generated grids remain usable in both `modern` and `pixel`
 - MARD 221 palette showcase remains readable in both `modern` and `pixel`
 - no extra network requests are required for the style
 - pixel mode visually reflects the `local/pixel-ref` direction without copying unrelated product content
@@ -342,4 +342,4 @@ If one command fails, fix the issue and rerun the relevant command. If the same 
   - `git diff --check`
 - Notes:
   - E2E/browser verification skipped by user request on 2026-07-06.
-  - Pixel UI implementation remains scoped to interface presentation and does not alter pattern data, MARD 221 data, grid size support, palette matching, or local-only processing boundaries.
+  - Pixel UI implementation remains scoped to interface presentation and does not alter pattern data, MARD 221 data, output-dimension support, palette matching, or local-only processing boundaries.

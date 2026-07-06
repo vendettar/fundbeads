@@ -137,7 +137,7 @@ Recommended labels:
 - Reprocess when longest edge changes with `{ refreshPreview: false }`.
 - Debounce/coalesce slider changes as in the current dimension controls.
 - Do not store longest edge or source image size in localStorage in this instruction.
-- Do not change MARD 221 palette data, RGB matching, alpha-over-white compositing, count sorting, or row-major cell coordinates.
+- Do not change MARD 221 palette data, local color-distance matching behavior, dither behavior, alpha-over-white compositing, count sorting, or row-major cell coordinates.
 - Do not add backend services, uploads, telemetry, remote image processing, or third-party image libraries.
 
 ## Image Case Matrix
