@@ -14,7 +14,7 @@ function ImagePreview({ fileName, previewUrl }: { fileName: string; previewUrl: 
         <span className="truncate text-xs font-semibold text-muted-foreground">{fileName}</span>
       </div>
       <div className="mt-3 grid place-items-center overflow-hidden bg-background">
-        <img src={previewUrl} alt={t("originalPreviewAlt", { fileName })} className="original-preview-image block max-h-[36vh] max-w-full object-contain" />
+        <img src={previewUrl} alt={t("originalPreviewAlt", { fileName })} className="original-preview-image block max-w-full object-contain" />
       </div>
     </section>
   );
@@ -34,7 +34,7 @@ export function PatternSideRail({
   onPinnedColorToggle: (colorCode: string) => string | null;
 }) {
   return (
-    <aside className="grid gap-3 xl:h-full xl:min-h-0 xl:self-stretch xl:grid-rows-[auto_auto_minmax(0,1fr)]">
+    <aside className="pattern-side-rail grid gap-3 xl:h-full xl:min-h-0 xl:self-stretch">
       <ImagePreview fileName={fileName} previewUrl={previewUrl} />
       <PatternStatsCard pattern={pattern} />
       <ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />

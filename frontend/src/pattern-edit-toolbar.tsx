@@ -150,7 +150,7 @@ export function PatternEditControls({
       </div>
 
       {isReplacePanelOpen ? (
-        <div id="pattern-edit-replace-panel" className="grid gap-2 border-b border-border bg-background px-3 py-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+        <div id="pattern-edit-replace-panel" className="pattern-edit-replace-panel grid gap-2 border-b border-border bg-background px-3 py-2 sm:items-end">
           <label className="grid min-w-0 gap-1 text-xs font-bold text-muted-foreground">
             <span>{t("patternEditReplaceSource")}</span>
             <div className="flex min-w-0 items-center gap-2">

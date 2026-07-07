@@ -1,5 +1,7 @@
 :root {
   color-scheme: light;
+  --beads-layer-popover: 30;
+  --beads-layer-modal: 50;
 }
 
 :root[data-theme="midnight"] {

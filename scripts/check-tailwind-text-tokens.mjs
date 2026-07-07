@@ -8,8 +8,8 @@ import { fileURLToPath } from "node:url";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "..");
 const scanRoots = ["frontend/src"];
-const sourceExtensions = new Set([".css", ".js", ".jsx", ".ts", ".tsx"]);
-const arbitraryTextPattern = /(?:^|[\s"'`])([!A-Za-z0-9_:/.[\]()%=-]*text-\[[^\]\s"'`]+\])(?=$|[\s"'`,])/g;
+const sourceExtensions = new Set([".jsx", ".tsx"]);
+const staticArbitraryUtilityPattern = /(?:^|[\s"'`])([!A-Za-z0-9_:/.-]+-\[[^\]\s"'`]+\])(?=$|[\s"'`,])/g;
 
 function extensionOf(filePath) {
   const lastDot = filePath.lastIndexOf(".");
@@ -44,7 +44,7 @@ for (const root of scanRoots) {
     const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
 
     for (const [index, line] of lines.entries()) {
-      for (const match of line.matchAll(arbitraryTextPattern)) {
+      for (const match of line.matchAll(staticArbitraryUtilityPattern)) {
         findings.push(`${relativePath}:${index + 1}: ${match[1]}`);
       }
     }
@@ -52,10 +52,10 @@ for (const root of scanRoots) {
 }
 
 if (findings.length > 0) {
-  console.error("Arbitrary Tailwind text-size utilities are not allowed.");
-  console.error("Use Tailwind scale tokens such as text-xs/text-sm, or add a named semantic CSS class for dense UI cases.");
+  console.error("Static arbitrary Tailwind utilities are not allowed in JSX.");
+  console.error("Use Tailwind scale tokens, named semantic CSS classes, or Tailwind v4 CSS tokens in frontend/src/styles/*.css.");
   console.error(findings.join("\n"));
   process.exit(1);
 }
 
-console.log("Tailwind text-size token guard passed.");
+console.log("Tailwind static arbitrary utility guard passed.");

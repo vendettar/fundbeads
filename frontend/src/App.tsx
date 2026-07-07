@@ -159,6 +159,20 @@ export function App() {
     [effectivePattern, fallbackDimensions, longestEdge, sourceImageSize],
   );
   const xLabels = useMemo(() => axisLabels(outputDimensions.width), [outputDimensions.width]);
+  const localeOptions = useMemo(() => locales.map((nextLocale) => ({ value: nextLocale.id, label: nextLocale.label, displayLabel: nextLocale.shortLabel })), []);
+  const themeOptions = useMemo(
+    () => themes.map((nextTheme) => ({ value: nextTheme.id, label: themeLabel(nextTheme.id), displayLabel: themeShortLabels[nextTheme.id] })),
+    [themeLabel],
+  );
+  const interfaceStyleOptions = useMemo(
+    () =>
+      interfaceStyles.map((nextStyle) => ({
+        value: nextStyle.id,
+        label: interfaceStyleLabel(nextStyle.id),
+        displayLabel: interfaceStyleShortLabels[nextStyle.id],
+      })),
+    [interfaceStyleLabel],
+  );
 
   const setGridFocusedColorCode = useCallback((colorCode: string | null) => {
     const grid = patternGridRef.current;
@@ -225,7 +239,7 @@ export function App() {
       <input id="image-upload" className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={onFileChange} />
       <section className="border-b border-border bg-card shadow-panel">
         <div className="flex flex-col gap-4 px-3 py-4 sm:px-4 lg:px-6">
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_auto] xl:items-center">
+          <div className="app-header-layout grid gap-4 xl:items-center">
             <div className="min-w-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -266,7 +280,7 @@ export function App() {
                         setLocale(nextLocale);
                       }
                     }}
-                    options={locales.map((nextLocale) => ({ value: nextLocale.id, label: nextLocale.label, displayLabel: nextLocale.shortLabel }))}
+                    options={localeOptions}
                   />
                   <PreferenceSelect
                     label={t("theme")}
@@ -278,7 +292,7 @@ export function App() {
                         setTheme(nextTheme);
                       }
                     }}
-                    options={themes.map((nextTheme) => ({ value: nextTheme.id, label: themeLabel(nextTheme.id), displayLabel: themeShortLabels[nextTheme.id] }))}
+                    options={themeOptions}
                   />
                   <PreferenceSelect
                     label={t("interfaceStyle")}
@@ -290,11 +304,7 @@ export function App() {
                         setInterfaceStyle(nextStyle);
                       }
                     }}
-                    options={interfaceStyles.map((nextStyle) => ({
-                      value: nextStyle.id,
-                      label: interfaceStyleLabel(nextStyle.id),
-                      displayLabel: interfaceStyleShortLabels[nextStyle.id],
-                    }))}
+                    options={interfaceStyleOptions}
                   />
                 </div>
               </div>
@@ -316,7 +326,7 @@ export function App() {
       ) : null}
       <section className="px-3 py-4 sm:px-4 lg:px-6" aria-busy={isProcessing}>
         {effectivePattern && patternEditState ? (
-          <div className="grid min-h-0 gap-4 xl:h-[calc(100svh-170px)] xl:grid-cols-[260px_minmax(0,1fr)_260px] xl:items-stretch">
+          <div className="app-workspace-with-rail grid gap-4 xl:items-stretch">
             <PatternLongestEdgeToolbar
               className="h-full self-stretch"
               longestEdge={longestEdge}
@@ -345,7 +355,7 @@ export function App() {
             ) : null}
           </div>
         ) : (
-          <div className="grid min-h-[calc(100svh-170px)] items-stretch gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
+          <div className="app-workspace-upload grid items-stretch gap-4">
             <PatternLongestEdgeToolbar
               className="h-full self-stretch"
               longestEdge={longestEdge}

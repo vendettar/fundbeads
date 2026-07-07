@@ -69,13 +69,13 @@ export function PaletteDialog({ onClose }: { onClose: () => void }) {
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 grid bg-black/55 p-3 sm:p-6" role="presentation" onMouseDown={onClose}>
+    <div className="layer-modal-backdrop fixed inset-0 grid bg-black/55 p-3 sm:p-6" role="presentation" onMouseDown={onClose}>
       <section
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="mard-palette-dialog-title"
-        className="m-auto grid max-h-[90vh] w-full max-w-6xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden border border-border bg-card shadow-panel"
+        className="palette-dialog-panel m-auto grid w-full max-w-6xl overflow-hidden border border-border bg-card shadow-panel"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex min-w-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
@@ -151,7 +151,7 @@ function MardPaletteShowcase() {
                 {t("paletteFamilyTitle", { family: group.prefix, count: formatNumber(group.colors.length) })}
               </h3>
             </div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-2">
+            <div className="palette-color-grid grid gap-2">
               {group.colors.map((color) => (
                 <button
                   key={color.code}

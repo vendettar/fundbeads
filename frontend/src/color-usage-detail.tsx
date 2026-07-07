@@ -37,11 +37,11 @@ export function formatColorUsageList(
 }
 
 function colorUsageGridColumns(compact: boolean) {
-  return compact ? "grid-cols-[minmax(0,1fr)_2rem]" : "grid-cols-[minmax(0,1fr)_3rem]";
+  return compact ? "color-usage-columns-compact" : "color-usage-columns-full";
 }
 
 function colorUsageMeasureColumns(compact: boolean) {
-  return compact ? "grid-cols-[minmax(0,1fr)_3.5rem_3.75rem]" : "grid-cols-[minmax(16rem,1fr)_7rem_7rem]";
+  return compact ? "color-usage-measures-compact" : "color-usage-measures-full";
 }
 
 export function ColorUsageDetail({
@@ -93,7 +93,7 @@ export function ColorUsageDetail({
   }
 
   return (
-    <section className={`color-usage-detail grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden border border-border bg-card p-3 shadow-panel ${className}`} aria-label={t("colorDetailTitle")}>
+    <section className={`color-usage-detail grid min-h-0 overflow-hidden border border-border bg-card p-3 shadow-panel ${className}`} aria-label={t("colorDetailTitle")}>
       <div className="border-b border-border pb-2">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-foreground">{t("colorDetailTitle")}</h3>
@@ -115,7 +115,7 @@ export function ColorUsageDetail({
         </div>
         <p className="text-caption-compact mt-1 leading-snug text-muted-foreground">{t("colorDetailHint")}</p>
       </div>
-      <div className={compact ? "mt-2 grid max-h-[28vh] overflow-y-auto xl:max-h-none xl:min-h-0" : "mt-2 grid"}>
+      <div className={compact ? "color-usage-scroll-compact mt-2 grid overflow-y-auto" : "mt-2 grid"}>
         <div className={`${compact ? "text-caption-dense px-2" : "px-3 text-xs"} grid ${colorUsageGridColumns(compact)} border-b border-border bg-muted py-2 font-bold uppercase text-muted-foreground`}>
           <span className={`grid ${colorUsageMeasureColumns(compact)}`}>
             <span>{t("colorColumn")}</span>

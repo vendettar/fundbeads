@@ -29,7 +29,7 @@ export function UploadWorkspace({
         onDragEnter={onDragEnter}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
-        className={`upload-preview-canvas grid h-full min-h-[420px] place-items-center border px-4 py-8 text-center transition sm:px-6 ${
+        className={`upload-preview-canvas grid h-full place-items-center border px-4 py-8 text-center transition sm:px-6 ${
           isDraggingFile ? "border-primary bg-muted shadow-panel" : "border-border bg-background"
         }`}
       >
@@ -40,7 +40,7 @@ export function UploadWorkspace({
             tabIndex={0}
             aria-describedby="upload-dropzone-description"
             onKeyDown={onKeyDown}
-            className="upload-preview-frame mx-auto grid aspect-[4/3] w-full max-w-2xl cursor-pointer place-items-center border border-dashed border-border bg-muted p-5 rounded-lg transition hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-ring"
+            className="upload-preview-frame mx-auto grid w-full max-w-2xl cursor-pointer place-items-center rounded-lg border border-dashed border-border bg-muted p-5 transition hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <span className="grid justify-items-center rounded-md border border-border bg-card px-6 py-5 shadow-panel">
               <span className="grid size-16 place-items-center rounded-md border border-border bg-background text-primary">
