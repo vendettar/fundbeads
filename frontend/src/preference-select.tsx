@@ -17,15 +17,22 @@ type PreferenceMenuViewport = Pick<Window, "innerWidth" | "innerHeight">;
 const preferenceMenuOffset = 6;
 const preferenceMenuViewportMargin = 8;
 const preferenceMenuMinWidth = 96;
+const preferenceMenuMaxWidth = 360;
 const preferenceMenuPreferredMaxHeight = 320;
 const preferenceMenuMinFlipHeight = 160;
+const preferenceMenuOptionHorizontalPadding = 48;
+const preferenceMenuOptionLabelGap = 20;
+const preferenceMenuTextUnitWidth = 9;
+const defaultSelectedLabelClassName = "pointer-events-none min-w-6 max-w-24 truncate";
 
 export function getPreferenceMenuPlacement(
   rect: PreferenceMenuAnchorRect,
   viewport: PreferenceMenuViewport = typeof window === "undefined" ? { innerWidth: 1024, innerHeight: 768 } : window,
+  preferredWidth = rect.width,
 ) {
-  const minWidth = Math.max(preferenceMenuMinWidth, Math.ceil(rect.width));
-  const maxLeft = Math.max(preferenceMenuViewportMargin, viewport.innerWidth - preferenceMenuViewportMargin - minWidth);
+  const maxWidth = Math.max(preferenceMenuMinWidth, Math.min(preferenceMenuMaxWidth, viewport.innerWidth - preferenceMenuViewportMargin * 2));
+  const menuWidth = Math.min(maxWidth, Math.max(preferenceMenuMinWidth, Math.ceil(rect.width), Math.ceil(preferredWidth)));
+  const maxLeft = Math.max(preferenceMenuViewportMargin, viewport.innerWidth - preferenceMenuViewportMargin - menuWidth);
   const left = Math.min(Math.max(preferenceMenuViewportMargin, Math.floor(rect.left)), maxLeft);
   const belowTop = Math.ceil(rect.bottom + preferenceMenuOffset);
   const belowHeight = Math.max(0, viewport.innerHeight - preferenceMenuViewportMargin - belowTop);
@@ -37,9 +44,22 @@ export function getPreferenceMenuPlacement(
   return {
     top: shouldFlip ? Math.max(preferenceMenuViewportMargin, Math.floor(anchorTop - preferenceMenuOffset - maxHeight)) : belowTop,
     left,
-    minWidth,
+    minWidth: menuWidth,
+    width: menuWidth,
+    maxWidth,
     maxHeight,
   };
+}
+
+export function estimatePreferenceMenuWidth(options: readonly SelectOption[]) {
+  const widestOptionContent = options.reduce((widestWidth, option) => {
+    const labelWidth = estimatePreferenceTextWidth(option.label);
+    const displayLabelWidth = option.displayLabel ? preferenceMenuOptionLabelGap + estimatePreferenceTextWidth(option.displayLabel) : 0;
+    const descriptionWidth = option.description ? Math.min(34 * preferenceMenuTextUnitWidth, estimatePreferenceTextWidth(option.description)) : 0;
+    return Math.max(widestWidth, labelWidth + displayLabelWidth, descriptionWidth);
+  }, 0);
+
+  return Math.ceil(widestOptionContent + preferenceMenuOptionHorizontalPadding);
 }
 
 export function getNextPreferenceOptionIndex(currentIndex: number, direction: 1 | -1, optionCount: number) {
@@ -57,6 +77,7 @@ export function PreferenceSelect({
   onChange,
   describedBy,
   className = "",
+  selectedLabelClassName = defaultSelectedLabelClassName,
 }: {
   label: string;
   icon: ReactNode;
@@ -65,13 +86,14 @@ export function PreferenceSelect({
   onChange: (value: string) => void;
   describedBy?: string;
   className?: string;
+  selectedLabelClassName?: string;
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [menuPlacement, setMenuPlacement] = useState({ top: 0, left: 0, minWidth: preferenceMenuMinWidth, maxHeight: preferenceMenuPreferredMaxHeight });
+  const [menuPlacement, setMenuPlacement] = useState({ top: 0, left: 0, minWidth: preferenceMenuMinWidth, width: preferenceMenuMinWidth, maxWidth: preferenceMenuMaxWidth, maxHeight: preferenceMenuPreferredMaxHeight });
   const selectedOption = options.find((option) => option.value === value);
   const selectedIndex = Math.max(
     0,
@@ -86,8 +108,8 @@ export function PreferenceSelect({
     if (!rect) {
       return;
     }
-    setMenuPlacement(getPreferenceMenuPlacement(rect));
-  }, []);
+    setMenuPlacement(getPreferenceMenuPlacement(rect, window, estimatePreferenceMenuWidth(options)));
+  }, [options]);
 
   const openMenu = useCallback(() => {
     updateMenuPlacement();
@@ -223,7 +245,7 @@ export function PreferenceSelect({
         className={`preference-select-control inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-3 text-sm font-semibold text-foreground transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring ${className}`}
       >
         <span className="pointer-events-none text-muted-foreground">{icon}</span>
-        <span className="pointer-events-none min-w-6 max-w-24 truncate">{selectedLabel}</span>
+        <span className={selectedLabelClassName}>{selectedLabel}</span>
         <ChevronDown className="pointer-events-none text-muted-foreground" size={15} />
       </button>
       {isOpen && typeof document !== "undefined"
@@ -239,6 +261,8 @@ export function PreferenceSelect({
                 top: menuPlacement.top,
                 left: menuPlacement.left,
                 minWidth: menuPlacement.minWidth,
+                width: menuPlacement.width,
+                maxWidth: menuPlacement.maxWidth,
                 maxHeight: menuPlacement.maxHeight,
               }}
             >
@@ -256,7 +280,7 @@ export function PreferenceSelect({
                   }`}
                 >
                   <span className="flex min-w-0 items-start justify-between gap-3">
-                    <span className="min-w-0 truncate">{option.label}</span>
+                    <span className="min-w-0 break-words">{option.label}</span>
                     {option.displayLabel ? <span className="shrink-0 font-mono text-xs text-muted-foreground">{option.displayLabel}</span> : null}
                   </span>
                   {option.description ? <span className="text-caption-compact min-w-0 break-words font-medium leading-snug text-muted-foreground">{option.description}</span> : null}
@@ -268,4 +292,12 @@ export function PreferenceSelect({
         : null}
     </>
   );
+}
+
+function estimatePreferenceTextWidth(value: string) {
+  return Array.from(value).reduce((width, character) => width + estimatePreferenceTextUnits(character) * preferenceMenuTextUnitWidth, 0);
+}
+
+function estimatePreferenceTextUnits(character: string) {
+  return /[\u1100-\u115f\u2329\u232a\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe10-\ufe19\ufe30-\ufe6f\uff00-\uff60\uffe0-\uffe6]/u.test(character) ? 2 : 1;
 }

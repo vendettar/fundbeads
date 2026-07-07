@@ -1,7 +1,8 @@
 import { Check, Copy, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useI18n } from "./i18n";
+import { mardPalette } from "./palette";
 import type { Pattern } from "./pattern";
 
 type CopyFeedbackStatus = "copySucceeded" | "copyFailed";
@@ -47,19 +48,28 @@ function colorUsageMeasureColumns(compact: boolean) {
 export function ColorUsageDetail({
   className = "",
   pattern,
+  pinnedColorCode,
   onPreviewColorChange,
   onPinnedColorToggle,
   compact = false,
 }: {
   className?: string;
   pattern: Pattern;
+  pinnedColorCode: string | null;
   onPreviewColorChange: (colorCode: string | null) => void;
-  onPinnedColorToggle: (colorCode: string) => string | null;
+  onPinnedColorToggle: (colorCode: string) => void;
   compact?: boolean;
 }) {
   const { formatNumber, paletteLabel, t } = useI18n();
   const [copyStatus, setCopyStatus] = useState<CopyStatus>(null);
-  const [pinnedColorCode, setPinnedColorCode] = useState<string | null>(null);
+  const visibleUsage = useMemo(() => {
+    if (!pinnedColorCode || pattern.usage.some(({ color }) => color.code === pinnedColorCode)) {
+      return pattern.usage;
+    }
+
+    const pinnedColor = mardPalette.find((color) => color.code === pinnedColorCode);
+    return pinnedColor ? [{ color: pinnedColor, count: 0 }, ...pattern.usage] : pattern.usage;
+  }, [pattern.usage, pinnedColorCode]);
   const listCopySucceeded = copyStatus?.target === "list" && copyStatus.status === "copySucceeded";
   const listCopyFailed = copyStatus?.target === "list" && copyStatus.status === "copyFailed";
 
@@ -70,10 +80,6 @@ export function ColorUsageDetail({
     const timer = setTimeout(() => setCopyStatus(null), 1500);
     return () => clearTimeout(timer);
   }, [copyStatus]);
-
-  useEffect(() => {
-    setPinnedColorCode(null);
-  }, [pattern]);
 
   async function copyText(text: string, target: { target: "list" } | { target: "color"; code: string }) {
     try {
@@ -89,7 +95,7 @@ export function ColorUsageDetail({
   }
 
   function togglePinnedColor(colorCode: string) {
-    setPinnedColorCode(onPinnedColorToggle(colorCode));
+    onPinnedColorToggle(colorCode);
   }
 
   return (
@@ -124,7 +130,7 @@ export function ColorUsageDetail({
           </span>
           <span className="sr-only">{t("copyColorLine", { code: "" })}</span>
         </div>
-        {pattern.usage.map(({ color, count }) => {
+        {visibleUsage.map(({ color, count }) => {
           const isPinned = pinnedColorCode === color.code;
           const colorCopyStatus = copyStatus?.target === "color" && copyStatus.code === color.code ? copyStatus.status : null;
           const colorCopySucceeded = colorCopyStatus === "copySucceeded";

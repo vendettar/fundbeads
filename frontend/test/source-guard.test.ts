@@ -5,10 +5,11 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const clientSourceModules = import.meta.glob<string>("../src/**/*.{ts,tsx}", { query: "?raw", import: "default", eager: true });
+const cursorAssetModules = import.meta.glob<string>("../src/assets/cursors/*.svg", { query: "?raw", import: "default", eager: true });
 const clientSourceFiles = Object.entries(clientSourceModules)
   .map(([path, source]) => [path.replace("../src/", ""), source] as const)
   .sort(([left], [right]) => left.localeCompare(right));
-const localPatternPersistenceSources = clientSourceFiles.filter(([sourceFile]) => ["local-pattern-codec.ts", "local-pattern-db.ts", "local-pattern-record.ts"].includes(sourceFile));
+const localPatternPersistenceSources = clientSourceFiles.filter(([sourceFile]) => ["local-pattern-codec.ts", "local-pattern-db.ts", "local-pattern-record.ts", "last-workspace-db.ts"].includes(sourceFile));
 const cssSourceFiles = [
   "styles.css",
   "styles/base.css",
@@ -18,6 +19,9 @@ const cssSourceFiles = [
 ] as const;
 const cssSources = cssSourceFiles.map((filePath) => [filePath, readFileSync(new URL(`../src/${filePath}`, import.meta.url), "utf8")] as const);
 const jsxSourceFiles = clientSourceFiles.filter(([sourceFile]) => sourceFile.endsWith(".tsx"));
+const cursorAssetSources = Object.entries(cursorAssetModules)
+  .map(([path, source]) => [path.replace("../src/assets/cursors/", ""), source] as const)
+  .sort(([left], [right]) => left.localeCompare(right));
 
 describe("client-only source guard", () => {
   it("covers every frontend source module", () => {
@@ -42,12 +46,13 @@ describe("client-only source guard", () => {
     expect(sourceFileNames).toContain("pattern-grid-board.tsx");
     expect(sourceFileNames).toContain("pattern-grid-geometry.ts");
     expect(sourceFileNames).toContain("pattern-grid-interaction.ts");
+    expect(sourceFileNames).toContain("pattern-replace-options.ts");
     expect(sourceFileNames).toContain("pattern-render-model.ts");
     expect(sourceFileNames).toContain("pattern-preview-toolbar.tsx");
     expect(sourceFileNames).toContain("preference-select.tsx");
     expect(sourceFileNames).toContain("upload-workspace.tsx");
     expect(sourceFileNames).toContain("use-pattern-processing.ts");
-    expect(sourceFileNames).toEqual(expect.arrayContaining(["local-pattern-codec.ts", "local-pattern-db.ts", "local-pattern-record.ts"]));
+    expect(sourceFileNames).toEqual(expect.arrayContaining(["local-pattern-codec.ts", "local-pattern-db.ts", "local-pattern-record.ts", "last-workspace-db.ts"]));
   });
 
   it("does not introduce remote network, telemetry, or analytics APIs", () => {
@@ -83,6 +88,7 @@ describe("client-only source guard", () => {
   });
 
   it("keeps local pattern persistence free of account authority concepts", () => {
+    expect(localPatternPersistenceSources.map(([sourceFile]) => sourceFile)).toEqual(expect.arrayContaining(["last-workspace-db.ts"]));
     const forbiddenPatterns = [/\bpassword\b/i, /\bsession\b/i, /\btoken\b/i, /\bauth\b/i, /\blogin\b/i, /\bemail\b/i];
 
     for (const [sourceFile, source] of localPatternPersistenceSources) {
@@ -93,12 +99,33 @@ describe("client-only source guard", () => {
   });
 
   it("keeps app CSS free of remote asset loading", () => {
-    const forbiddenPatterns = [/@import\s+url\(/i, /@import\s+["']https?:/i, /https?:\/\//i, /\burl\(/i, /\bcdn\b/i];
+    const forbiddenPatterns = [/@import\s+url\(/i, /@import\s+["']https?:/i, /https?:\/\//i, /\burl\((?!["']?(?:data:image\/svg\+xml,|\.\.\/assets\/cursors\/cursor-[\w-]+\.svg["']?\s*\)))/i, /\bcdn\b/i];
 
     for (const [sourceFile, source] of cssSources) {
       for (const pattern of forbiddenPatterns) {
         expect(source, `${sourceFile} should not match ${pattern}`).not.toMatch(pattern);
       }
+    }
+  });
+
+  it("keeps pattern cursor assets local, compact, and filled", () => {
+    expect(cursorAssetSources.map(([fileName]) => fileName)).toEqual([
+      "cursor-eraser.svg",
+      "cursor-paintbrush.svg",
+      "cursor-pipette.svg",
+      "cursor-replace.svg",
+      "cursor-view-grabbing.svg",
+      "cursor-view-hand.svg",
+    ]);
+
+    for (const [fileName, source] of cursorAssetSources) {
+      const compactTransform = source.match(/transform="translate\(([\d.]+) ([\d.]+)\) scale\(([\d.]+)\)"/);
+
+      expect(source, `${fileName} should stay in a native 24px cursor box`).toMatch(/<svg[^>]*\bwidth="24"[^>]*\bheight="24"[^>]*\bviewBox="0 0 24 24"/);
+      expect(source, `${fileName} should use a white filled glyph`).toMatch(/\bfill="#FFFFFF"/);
+      expect(source, `${fileName} should not be a transparent stroke-only icon`).not.toMatch(/\bfill="none"/);
+      expect(compactTransform, `${fileName} should scale the glyph down inside the cursor box`).not.toBeNull();
+      expect(Number(compactTransform?.[3]), `${fileName} should be smaller than the native lucide glyph`).toBeLessThan(1);
     }
   });
 

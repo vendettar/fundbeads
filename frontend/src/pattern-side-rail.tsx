@@ -24,20 +24,22 @@ export function PatternSideRail({
   fileName,
   pattern,
   previewUrl,
+  pinnedColorCode,
   onPreviewColorChange,
   onPinnedColorToggle,
 }: {
   fileName: string;
   pattern: Pattern;
   previewUrl: string;
+  pinnedColorCode: string | null;
   onPreviewColorChange: (colorCode: string | null) => void;
-  onPinnedColorToggle: (colorCode: string) => string | null;
+  onPinnedColorToggle: (colorCode: string) => void;
 }) {
   return (
     <aside className="pattern-side-rail grid gap-3 xl:h-full xl:min-h-0 xl:self-stretch">
       <ImagePreview fileName={fileName} previewUrl={previewUrl} />
       <PatternStatsCard pattern={pattern} />
-      <ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />
+      <ColorUsageDetail className="xl:h-full xl:min-h-0" pattern={pattern} pinnedColorCode={pinnedColorCode} onPreviewColorChange={onPreviewColorChange} onPinnedColorToggle={onPinnedColorToggle} compact />
     </aside>
   );
 }

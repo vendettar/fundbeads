@@ -79,8 +79,82 @@
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
 }
 
-.pattern-edit-replace-panel {
-  grid-template-columns: 1fr;
+.pattern-edit-replace-popover {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  z-index: var(--beads-layer-popover);
+  width: min(31rem, calc(100vw - 2rem));
+  max-height: min(34rem, calc(100vh - 10rem));
+  overflow: auto;
+}
+
+.pattern-active-color-popover {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  z-index: var(--beads-layer-popover);
+  width: min(31rem, calc(100vw - 2rem));
+  max-height: min(34rem, calc(100vh - 10rem));
+  overflow: auto;
+}
+
+.pattern-active-color-picker {
+  max-height: 30rem;
+  overflow: auto;
+}
+
+.pattern-active-color-picker-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--beads-layer-popover);
+  border-bottom: 1px solid var(--beads-border);
+  background: var(--beads-background);
+  padding-bottom: 0.5rem;
+}
+
+.pattern-active-color-grid {
+  grid-template-columns: repeat(auto-fill, minmax(3.25rem, 1fr));
+}
+
+.pattern-active-color-tile {
+  min-height: 3.75rem;
+}
+
+.pattern-active-color-dot {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.pattern-replace-color-picker {
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.pattern-replace-color-picker-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--beads-layer-popover);
+  border-bottom: 1px solid var(--beads-border);
+  background: var(--beads-background);
+  padding-bottom: 0.5rem;
+}
+
+.pattern-replace-color-grid {
+  grid-template-columns: repeat(auto-fill, minmax(3.25rem, 1fr));
+}
+
+.pattern-replace-color-tile {
+  min-height: 3.75rem;
+}
+
+.pattern-replace-color-dot {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.pattern-replace-color-count {
+  font-size: 0.5625rem;
 }
 
 .text-caption-compact {
@@ -127,12 +201,6 @@ select option {
   .color-usage-scroll-compact {
     max-height: none;
     min-height: 0;
-  }
-}
-
-@media (min-width: 40rem) {
-  .pattern-edit-replace-panel {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   }
 }
 
