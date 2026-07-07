@@ -125,6 +125,16 @@ Manual editing happens after image generation and stays in browser session state
 
 No-bead cells render as empty cells, are excluded from usage counts, and do not display a MARD code.
 
+## Local Persistence
+
+Local IndexedDB pattern records store the effective row-major pattern, not only complete generated patterns.
+
+- `cellCodes` contains one entry per grid cell.
+- A `cellCodes` entry is either a stable MARD code or `null` for a no-bead cell.
+- `totalBeads` equals the number of non-null `cellCodes`.
+- `usage` must match the MARD-code histogram from non-null `cellCodes`.
+- Source images and object URLs are not stored by this record schema.
+
 ## Counting
 
 Generated output starts with every cell mapped to one bead. When manual edits exist, counting uses the effective cells and excludes no-bead cells.

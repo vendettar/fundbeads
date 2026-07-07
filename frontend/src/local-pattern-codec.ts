@@ -4,18 +4,10 @@ import { localPatternRecordVersion, type LocalPatternRecord, type LocalPatternRe
 
 const paletteByCode = new Map<string, BeadColor>(mardPalette.map((color) => [color.code, color]));
 
-export type CompleteCodedPatternCell = Omit<PatternCell, "color"> & {
-  color: BeadColor;
-};
-
-export type CompleteCodedPattern = Omit<Pattern, "cells"> & {
-  cells: CompleteCodedPatternCell[];
-};
-
 export function patternToLocalPatternRecordInput(pattern: Pattern, metadata: LocalPatternRecordMetadata): LocalPatternRecordInput {
-  assertCompleteCodedPattern(pattern);
+  assertRowMajorPattern(pattern);
   const createdAt = metadata.createdAt ?? Date.now();
-  const cellCodes = pattern.cells.map((cell) => cell.color.code);
+  const cellCodes = pattern.cells.map((cell) => cell.color?.code ?? null);
 
   return {
     id: metadata.id,
@@ -38,22 +30,22 @@ export function patternToLocalPatternRecordInput(pattern: Pattern, metadata: Loc
   };
 }
 
-export function isCompleteCodedPattern(pattern: Pattern): pattern is CompleteCodedPattern {
+export function isRowMajorPattern(pattern: Pattern): boolean {
   const expectedCells = pattern.width * pattern.height;
-  if (pattern.cells.length !== expectedCells || pattern.totalBeads !== expectedCells) {
+  if (pattern.cells.length !== expectedCells) {
     return false;
   }
 
   return pattern.cells.every((cell, index) => {
     const expectedX = (index % pattern.width) + 1;
     const expectedY = Math.floor(index / pattern.width) + 1;
-    return cell.x === expectedX && cell.y === expectedY && cell.color !== null;
+    return cell.x === expectedX && cell.y === expectedY;
   });
 }
 
-export function assertCompleteCodedPattern(pattern: Pattern): asserts pattern is CompleteCodedPattern {
-  if (!isCompleteCodedPattern(pattern)) {
-    throw new Error("Local pattern records require a complete row-major coded pattern and do not support no-bead cells yet.");
+export function assertRowMajorPattern(pattern: Pattern): void {
+  if (!isRowMajorPattern(pattern)) {
+    throw new Error("Local pattern records require a row-major pattern.");
   }
 }
 
@@ -81,7 +73,7 @@ export function normalizeLocalPatternRecord(value: unknown): LocalPatternRecord 
     !Array.isArray(value.cellCodes) ||
     value.cellCodes.length !== gridCellCount ||
     !Array.isArray(value.usage) ||
-    value.totalBeads !== gridCellCount ||
+    !isSafeNonNegativeInteger(value.totalBeads) ||
     value.usedColorCount !== value.usage.length ||
     value.ownerScope !== "anonymous-local" ||
     typeof value.localRecordId !== "string" ||
@@ -103,11 +95,23 @@ export function normalizeLocalPatternRecord(value: unknown): LocalPatternRecord 
   }
 
   const histogram = new Map<string, number>();
+  const normalizedCellCodes: Array<string | null> = [];
   for (const code of value.cellCodes) {
+    if (code === null) {
+      normalizedCellCodes.push(null);
+      continue;
+    }
+
     if (typeof code !== "string" || !paletteByCode.has(code)) {
       return null;
     }
+    normalizedCellCodes.push(code);
     histogram.set(code, (histogram.get(code) ?? 0) + 1);
+  }
+
+  const totalBeads = [...histogram.values()].reduce((sum, count) => sum + count, 0);
+  if (value.totalBeads !== totalBeads) {
+    return null;
   }
 
   const normalizedUsage: LocalPatternUsage[] = [];
@@ -138,9 +142,9 @@ export function normalizeLocalPatternRecord(value: unknown): LocalPatternRecord 
     height,
     paletteSlug: mard221Palette.slug,
     paletteVersion: mard221Palette.version,
-    cellCodes: [...value.cellCodes],
+    cellCodes: normalizedCellCodes,
     usage: normalizedUsage,
-    totalBeads: gridCellCount,
+    totalBeads,
     usedColorCount: normalizedUsage.length,
     ownerScope: "anonymous-local",
     localRecordId: value.localRecordId,
@@ -151,6 +155,14 @@ export function normalizeLocalPatternRecord(value: unknown): LocalPatternRecord 
 
 export function localPatternRecordToPattern(record: LocalPatternRecord): Pattern {
   const cells: PatternCell[] = record.cellCodes.map((code, index) => {
+    if (code === null) {
+      return {
+        x: (index % record.width) + 1,
+        y: Math.floor(index / record.width) + 1,
+        color: null,
+      };
+    }
+
     const color = paletteByCode.get(code);
     if (!color) {
       throw new Error(`Unknown MARD code in local pattern record: ${code}`);

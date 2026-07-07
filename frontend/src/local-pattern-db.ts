@@ -15,14 +15,12 @@ import {
 import { normalizeLocalPatternRecord } from "./local-pattern-codec";
 
 export {
-  assertCompleteCodedPattern,
+  assertRowMajorPattern,
   estimateLocalPatternRecordBytes,
-  isCompleteCodedPattern,
+  isRowMajorPattern,
   localPatternRecordToPattern,
   normalizeLocalPatternRecord,
   patternToLocalPatternRecordInput,
-  type CompleteCodedPattern,
-  type CompleteCodedPatternCell,
 } from "./local-pattern-codec";
 export {
   localPatternDbName,

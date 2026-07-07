@@ -25,7 +25,7 @@ export type LocalPatternRecord = {
   height: number;
   paletteSlug: typeof mard221Palette.slug;
   paletteVersion: typeof mard221Palette.version;
-  cellCodes: string[];
+  cellCodes: Array<string | null>;
   usage: LocalPatternUsage[];
   totalBeads: number;
   usedColorCount: number;

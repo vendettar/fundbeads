@@ -139,7 +139,7 @@ This document records durable product, architecture, runtime, and design decisio
 **Implications**:
 
 - `fundbeads-pattern-store` is a browser-local UX/cache layer, not account authority.
-- Persisted records store `width`, `height`, `paletteSlug`, `paletteVersion`, row-major MARD `cellCodes`, usage counts, total beads, timestamps, and local-only sync metadata.
+- Persisted records store `width`, `height`, `paletteSlug`, `paletteVersion`, row-major MARD-or-null `cellCodes`, usage counts, total beads, timestamps, and local-only sync metadata.
 - Records are validated against the active `mard-221` palette before reconstruction.
 - Source images are not automatically persisted. Any source-image blob storage must be explicit, bounded, and covered by a future instruction.
 - Object URLs must never be persisted.

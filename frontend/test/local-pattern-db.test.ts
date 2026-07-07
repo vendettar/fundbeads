@@ -6,13 +6,13 @@ import { mard221Palette, mardPalette, type BeadColor } from "../src/palette";
 import { cellsToPattern, type Pattern, type PatternDimensions, type PatternCell } from "../src/pattern";
 import { createPatternEditState, getEffectivePattern, paintPatternCell, replacePatternColor } from "../src/pattern-edit";
 import {
-  assertCompleteCodedPattern,
+  assertRowMajorPattern,
   canUseLocalPatternDb,
   clearLocalPatternRecords,
   deleteLocalPatternDatabaseForTests,
   deleteLocalPatternRecord,
   estimateLocalPatternRecordBytes,
-  isCompleteCodedPattern,
+  isRowMajorPattern,
   listLocalPatternRecords,
   localPatternDbName,
   localPatternDbVersion,
@@ -96,7 +96,6 @@ describe("local pattern persistence contract", () => {
     ["oversized height", { height: 101 }],
     ["longest edge below minimum", { width: 39, height: 39, cellCodes: Array.from({ length: 39 * 39 }, () => mardPalette[0].code), usage: [{ code: mardPalette[0].code, count: 39 * 39 }], totalBeads: 39 * 39 }],
     ["wrong cell count", { cellCodes: [mardPalette[0].code] }],
-    ["null cell code", { cellCodes: [null, ...Array.from({ length: totalBeads - 1 }, () => mardPalette[0].code)] }],
     ["undefined cell code", { cellCodes: [undefined, ...Array.from({ length: totalBeads - 1 }, () => mardPalette[0].code)] }],
     ["empty cell code", { cellCodes: ["", ...Array.from({ length: totalBeads - 1 }, () => mardPalette[0].code)] }],
     ["no-bead sentinel cell code", { cellCodes: ["NO_BEAD", ...Array.from({ length: totalBeads - 1 }, () => mardPalette[0].code)] }],
@@ -144,16 +143,16 @@ describe("local pattern persistence contract", () => {
     expect(input).not.toHaveProperty("sourceImageSaved");
   });
 
-  it("persists paint-only and replace-only effective patterns when every cell remains coded", () => {
+  it("persists paint-only and replace-only effective patterns", () => {
     const basePattern = createSolidPattern(mardPalette[0]);
     const paintState = paintPatternCell(createPatternEditState(basePattern, mardPalette), 0, mardPalette[1].code, mardPalette);
     const paintedPattern = getEffectivePattern(paintState, mardPalette);
     const replaceState = replacePatternColor(createPatternEditState(basePattern, mardPalette), mardPalette[0].code, mardPalette[1].code, mardPalette);
     const replacedPattern = getEffectivePattern(replaceState, mardPalette);
 
-    expect(isCompleteCodedPattern(paintedPattern)).toBe(true);
-    expect(isCompleteCodedPattern(replacedPattern)).toBe(true);
-    expect(() => assertCompleteCodedPattern(paintedPattern)).not.toThrow();
+    expect(isRowMajorPattern(paintedPattern)).toBe(true);
+    expect(isRowMajorPattern(replacedPattern)).toBe(true);
+    expect(() => assertRowMajorPattern(paintedPattern)).not.toThrow();
     expect(patternToLocalPatternRecordInput(paintedPattern, { id: "painted-pattern", createdAt: 1_700_000_000_000 })).toMatchObject({
       id: "painted-pattern",
       totalBeads,
@@ -167,17 +166,17 @@ describe("local pattern persistence contract", () => {
     });
   });
 
-  it("identifies complete coded patterns as the only compact local record input shape", () => {
+  it("identifies row-major patterns as the local record input shape", () => {
     const pattern = createSolidPattern();
 
-    expect(isCompleteCodedPattern(pattern)).toBe(true);
-    expect(isCompleteCodedPattern(cellsToPattern(pattern.cells.map((cell, index) => (index === 0 ? { ...cell, color: null } : cell)), dimensions))).toBe(false);
-    expect(isCompleteCodedPattern({ ...pattern, totalBeads: totalBeads - 1 })).toBe(false);
-    expect(isCompleteCodedPattern(cellsToPattern([{ ...pattern.cells[0], x: 2 }, ...pattern.cells.slice(1)], dimensions))).toBe(false);
-    expect(() => assertCompleteCodedPattern({ ...pattern, totalBeads: totalBeads - 1 })).toThrow("complete row-major coded pattern");
+    expect(isRowMajorPattern(pattern)).toBe(true);
+    expect(isRowMajorPattern(cellsToPattern(pattern.cells.map((cell, index) => (index === 0 ? { ...cell, color: null } : cell)), dimensions))).toBe(true);
+    expect(isRowMajorPattern({ ...pattern, totalBeads: totalBeads - 1 })).toBe(true);
+    expect(isRowMajorPattern(cellsToPattern([{ ...pattern.cells[0], x: 2 }, ...pattern.cells.slice(1)], dimensions))).toBe(false);
+    expect(() => assertRowMajorPattern(cellsToPattern([{ ...pattern.cells[0], x: 2 }, ...pattern.cells.slice(1)], dimensions))).toThrow("row-major pattern");
   });
 
-  it("rejects no-bead cells until compact local records can represent empty cells", () => {
+  it("persists and reconstructs no-bead cells", () => {
     const pattern = createSolidPattern();
     const noBeadPattern = cellsToPattern(
       pattern.cells.map((cell, index) => (index === 0 ? { ...cell, color: null } : cell)),
@@ -185,12 +184,18 @@ describe("local pattern persistence contract", () => {
     );
 
     expect(noBeadPattern.totalBeads).toBe(totalBeads - 1);
-    expect(() =>
-      patternToLocalPatternRecordInput(noBeadPattern, {
-        id: "pattern-input-empty-cell",
-        createdAt: 1_700_000_000_000,
-      }),
-    ).toThrow("complete row-major coded pattern");
+    const input = patternToLocalPatternRecordInput(noBeadPattern, {
+      id: "pattern-input-empty-cell",
+      createdAt: 1_700_000_000_000,
+    });
+    const record = normalizeLocalPatternRecord({ ...input, version: localPatternRecordVersion });
+    const reconstructed = localPatternRecordToPattern(record!);
+
+    expect(input.cellCodes[0]).toBeNull();
+    expect(input.totalBeads).toBe(totalBeads - 1);
+    expect(record).toMatchObject({ totalBeads: totalBeads - 1, usedColorCount: 1 });
+    expect(reconstructed.cells[0]).toEqual({ x: 1, y: 1, color: null });
+    expect(reconstructed.totalBeads).toBe(totalBeads - 1);
   });
 
   it.each([

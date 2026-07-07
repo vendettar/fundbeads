@@ -286,9 +286,9 @@ Recommended fields:
 - `height`: pattern height.
 - `palette_slug`: expected `mard-221` for the current palette.
 - `palette_version`: source palette version.
-- `cell_codes_json`: compact row-major array of MARD codes as JSON text.
+- `cell_codes_json`: compact row-major array of MARD codes or `null` no-bead entries as JSON text.
 - `usage_json`: compact array of code/count pairs as JSON text.
-- `total_beads`: for complete coded persistence records, must equal `width * height`; if future APIs accept edited no-bead patterns, the schema must represent empty cells and `total_beads` must equal the non-empty cell count.
+- `total_beads`: must equal the number of non-null `cell_codes_json` entries.
 - `used_color_count`: must equal usage length.
 - `source_file_name`: optional original filename, treated as private user data.
 - `created_at`: timestamp.
@@ -335,15 +335,15 @@ Requirements:
 
 ## Pattern Contract Boundary
 
-Server persistence must preserve the effective Fundbeads pattern contract. The compact complete-coded record shape can use the invariants below; any future schema that accepts no-bead cells must represent empty cells explicitly and count only non-empty cells in `totalBeads`.
+Server persistence must preserve the effective Fundbeads pattern contract. The compact record shape uses the invariants below and represents no-bead cells explicitly.
 
 - `width` and `height` are authoritative dimensions.
-- `totalBeads === width * height` for complete coded records.
+- `totalBeads` equals the number of non-null `cellCodes`.
 - `cellCodes.length === width * height`.
 - Cell codes are row-major.
-- Every cell code must exist in the active or declared palette version.
+- Every non-null cell code must exist in the active or declared palette version.
 - `usage` counts are positive integers.
-- Sum of usage counts equals `totalBeads`; for no-bead-capable schemas, this excludes empty cells.
+- Sum of usage counts equals `totalBeads` and excludes no-bead cells.
 - `usedColorCount === usage.length`.
 - Palette identity includes both `paletteSlug` and `paletteVersion`.
 
@@ -415,7 +415,7 @@ Required backend tests:
 - Email challenge stores token hash only and supports expiry lookup.
 - Saved pattern insert rejects invalid dimensions.
 - Saved pattern insert rejects mismatched `cell_codes_json` length.
-- Saved pattern insert rejects usage totals that do not equal `width * height` for complete-coded records; future no-bead-capable schemas must reject totals that differ from the non-empty cell count.
+- Saved pattern insert rejects usage totals that differ from the non-empty cell count.
 - Artifact metadata insert rejects unsupported kind or negative byte size.
 - Deleting or soft-deleting a user/pattern follows the documented foreign-key behavior.
 

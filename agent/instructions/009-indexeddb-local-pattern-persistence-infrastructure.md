@@ -1,22 +1,8 @@
-# [COMPLETED] 009 IndexedDB Local Pattern Persistence Infrastructure
+# 009 IndexedDB Local Pattern Persistence Infrastructure
 
 ## Status
 
-Completed and verified. This instruction defines the local persistence foundation only. It does not implement user registration, login, backend APIs, server storage, cloud sync, source-image saving, recent history UI, draft UI, or offline library UI.
-
-## Completion
-
-- Completed by: Codex Worker, Batch 5
-- Date: 2026-07-06
-- Follow-up audit verification: 2026-07-07, including complete-coded persistence contract checks and non-E2E `pnpm check`
-- Commands:
-  - `pnpm --dir frontend test:run local-pattern-db.test.ts i18n-theme.test.ts`
-  - `pnpm check && git diff --exit-code -- frontend/src/design-theme.generated.css`
-  - `git diff --check`
-  - `rg -n "fetch\\s*\\(|XMLHttpRequest|sendBeacon|https?://|telemetry|cdn" frontend/src/local-pattern-db.ts frontend/test`
-  - `rg -n "password|session|token|auth|login|email" frontend/src/local-pattern-db.ts frontend/test`
-  - `rg -n "fetch\\s*\\(|XMLHttpRequest|sendBeacon|https?://|telemetry|cdn" frontend/src/local-pattern-db.ts`
-  - `rg -n "password|session|token|auth|login|email" frontend/src/local-pattern-db.ts`
+Current local persistence contract. This instruction defines the browser-local persistence foundation only. It does not implement user registration, login, backend APIs, server storage, cloud sync, source-image saving, recent history UI, draft UI, or offline library UI.
 
 ## Goal
 
@@ -32,8 +18,8 @@ Use the Fundbeads role prompts before implementation. If subagents are available
 
 - `agent/role-prompt/top-role.md`: confirm scope, sequencing, and future account-sync boundaries.
 - `agent/role-prompt/business-analyst-role.md`: confirm this is infrastructure for planned persistence features, not a hidden feature shipment.
-- `agent/role-prompt/pattern-contract-role.md`: own persisted pattern shape, palette/version contracts, cell order, usage counts, and migration behavior.
-- `agent/role-prompt/palette-data-role.md`: verify persisted records carry active palette identity and do not freeze stale MARD data silently.
+- `agent/role-prompt/pattern-contract-role.md`: own persisted pattern shape, palette/version contracts, cell order, usage counts, and schema behavior.
+- `agent/role-prompt/palette-data-role.md`: verify persisted records carry active palette identity and do not freeze outdated MARD data silently.
 - `agent/role-prompt/security-role.md`: review browser-local storage, source image privacy boundaries, account-sync boundaries, and no upload guarantees.
 - `agent/role-prompt/performance-role.md`: review storage growth, quota handling, pruning, object URL lifecycle, and bounded pattern size cost.
 - `agent/role-prompt/platform-role.md`: verify static deployment remains unchanged and no backend/database/runtime secret boundary is introduced.
@@ -199,9 +185,9 @@ Recommended `LocalPatternRecord` fields:
 - `height`: persisted pattern height, normalized to `1..100`, with longest edge at least `40`.
 - `paletteSlug`: `mard-221`.
 - `paletteVersion`: source palette version from `mard221Palette.version`.
-- `cellCodes`: for this v1 complete-coded record, row-major array of MARD codes, length must equal `width * height`.
-- `usage`: for this v1 complete-coded record, array of `{ code, count }`, sum must equal `width * height`.
-- `totalBeads`: for this v1 complete-coded record, must equal `width * height`.
+- `cellCodes`: row-major array of MARD codes or `null` no-bead entries, length must equal `width * height`.
+- `usage`: array of `{ code, count }`, derived from non-null `cellCodes`.
+- `totalBeads`: must equal the number of non-null `cellCodes`.
 - `usedColorCount`: must equal `usage.length`.
 - `previewObjectUrl`: forbidden in persistence. Object URLs are runtime-only.
 - `draftState`: optional future field for crop/position/export settings, versioned separately if needed.
@@ -210,7 +196,7 @@ Recommended `LocalPatternRecord` fields:
 - `remoteRecordId`: optional future field; must be absent or `null` until sync exists.
 - `syncStatus`: `"local-only"` for this instruction.
 
-This compact v1 local record represents complete coded patterns only. Effective edited patterns with no-bead cells (`PatternCell.color = null`) are valid runtime `Pattern` values, but require a future schema that can represent empty cells before they can be persisted. Do not persist redundant RGB values for every cell. Persist cell codes and reconstruct display colors from the current palette when rendering. If a future palette migration requires snapshot colors, that must be a separate decision.
+This compact local record represents generated and edited effective patterns. No-bead cells are stored as `null`; colored cells store stable MARD codes. Do not persist redundant RGB values for every cell. Reconstruct display colors from the current palette when rendering. Snapshot color storage requires a separate approved decision.
 
 ## Source Image Blob Policy
 
@@ -220,7 +206,7 @@ Default behavior:
 - Do not store generated preview object URLs.
 - Do not automatically persist image blobs during normal generation.
 - Do not include source-image blob references in `LocalPatternRecord`.
-- Records that claim a saved source image are invalid for the shipped Batch 009 contract.
+- Records that claim a saved source image are invalid for the current local pattern contract.
 
 Explicit-save behavior for future instructions:
 
@@ -246,7 +232,7 @@ Future account integration should follow these boundaries:
 - A future server must validate user identity and record ownership independently.
 - Local records may contain `remoteRecordId` only after a future sync API confirms ownership.
 - Before login, records remain `anonymous-local`.
-- After login, a future migration/sync flow may offer to associate local records with the signed-in account.
+- After login, a sync flow may offer to associate local records with the signed-in account.
 - Conflict resolution, delete propagation, and remote quota must be separate instructions.
 - Do not store auth tokens, passwords, session secrets, or email verification state in this pattern IndexedDB store.
 
@@ -274,7 +260,7 @@ Reading a local pattern record must validate:
 - Every code exists in the active palette.
 - `usage` counts are positive integers.
 - `usage` sum equals `totalBeads`.
-- `totalBeads === width * height` for this v1 complete-coded record.
+- `totalBeads` equals the number of non-null `cellCodes`.
 - `usedColorCount === usage.length`.
 - `paletteSlug === "mard-221"` for this implementation.
 - `paletteVersion` is compatible with the active `mard221Palette.version`.
@@ -328,13 +314,13 @@ Preferred first implementation:
 
 ## Implementation Notes
 
-- Prefer Dexie if the implementation needs IndexedDB migrations and typed tables; keep the dependency scoped to `frontend`.
+- Prefer Dexie if the implementation needs IndexedDB schema management and typed tables; keep the dependency scoped to `frontend`.
 - If using native IndexedDB instead, provide equivalent tests for open, upgrade, read, write, list, delete, and blocked/unavailable behavior.
 - Keep store names stable and documented.
 - Use pure normalizer helpers for stored data so most contract tests do not need a browser IndexedDB runtime.
 - Keep all local persistence code isolated from `pattern.ts` matching logic.
-- Convert between a complete-coded `Pattern` and `LocalPatternRecordInput` in a mapper function rather than spreading UI state directly into storage.
-- Keep storage functions latest-wins friendly; future autosave should not resurrect stale pattern state.
+- Convert between an effective `Pattern` and `LocalPatternRecordInput` in a mapper function rather than spreading UI state directly into storage.
+- Keep storage functions latest-wins friendly; autosave must not resurrect outdated pattern state.
 - Do not change `imageFileToPattern`, MARD matching, usage summarization, grid rendering, zoom, i18n, theme, or interface style behavior unless directly required by tests.
 
 ## Required Tests
@@ -344,7 +330,7 @@ Use TDD. Add failing tests before implementation and verify they fail for the ex
 Required unit tests:
 
 - Exports database name, schema version, and storage limit constants.
-- Normalizes a valid complete-coded `LocalPatternRecord`.
+- Normalizes a valid compact `LocalPatternRecord`.
 - Rejects unsupported schema versions.
 - Rejects unsupported width or height values.
 - Rejects records whose `cellCodes.length` does not equal `width * height`.
@@ -355,7 +341,7 @@ Required unit tests:
 - Reconstructs a `Pattern` from a valid local record using active palette colors.
 - Does not persist object URLs.
 - Does not require source image blobs for normal pattern records.
-- Rejects records that claim source image blob references under the shipped Batch 009 contract.
+- Rejects records that claim source image blob references under the current local pattern contract.
 - Safe storage functions degrade when IndexedDB is unavailable.
 
 Required integration tests if an IndexedDB test runtime is added:
