@@ -53,7 +53,7 @@ export function UploadWorkspace({
             </span>
           </label>
           <span className="mx-auto inline-flex rounded-md border border-border bg-card px-3 py-2 text-xs font-bold uppercase text-muted-foreground shadow-panel">
-            {isProcessing ? t("processingImage") : t("dropzoneHint")}
+            {t("dropzoneHint")}
           </span>
         </span>
       </div>

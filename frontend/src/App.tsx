@@ -15,10 +15,12 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 
 import { locales, normalizeLocale, useI18n } from "./i18n";
 import { interfaceStyles, normalizeInterfaceStyle, useInterfaceStyle, type InterfaceStyleId } from "./interface-style";
+import { clearLastWorkspaceRecord, readLastWorkspaceRecord, saveLastWorkspaceRecord } from "./last-workspace-db";
 import { mardPalette } from "./palette";
 import { PaletteDialog } from "./palette-dialog";
 import { PatternGrid } from "./pattern-grid";
 import { axisLabels } from "./pattern-grid-geometry";
+import { buildPatternGridColorCellIndex, patternGridColorFocusClassChanges } from "./pattern-grid-interaction";
 import { PatternSideRail } from "./pattern-side-rail";
 import { PreferenceSelect } from "./preference-select";
 import {
@@ -116,18 +118,44 @@ function FundbeadsLogo() {
 export function App() {
   const [patternEditState, setPatternEditState] = useState<PatternEditState | null>(null);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [pinnedColorCode, setPinnedColorCode] = useState<string | null>(null);
   const patternGridRef = useRef<HTMLDivElement>(null);
   const pinnedColorCodeRef = useRef<string | null>(null);
+  const patternGridColorCellIndexRef = useRef<Map<string, HTMLElement[]>>(new Map());
+  const focusedColorCodeRef = useRef<string | null>(null);
+  const pendingFocusedColorCodeRef = useRef<string | null>(null);
+  const focusFrameRef = useRef<number | null>(null);
   const { locale, setLocale, t, themeLabel, interfaceStyleLabel } = useI18n();
   const { theme, setTheme } = useTheme();
   const { interfaceStyle, setInterfaceStyle } = useInterfaceStyle();
 
+  const clearPinnedColorSelection = useCallback(() => {
+    pinnedColorCodeRef.current = null;
+    setPinnedColorCode(null);
+    pendingFocusedColorCodeRef.current = null;
+    focusedColorCodeRef.current = null;
+
+    const grid = patternGridRef.current;
+    if (!grid) {
+      return;
+    }
+
+    for (const cell of grid.querySelectorAll<HTMLElement>(".pattern-cell.is-focused-color")) {
+      cell.classList.remove("is-focused-color");
+    }
+    delete grid.dataset.colorFocus;
+    delete grid.dataset.colorFocusCode;
+  }, []);
+
   const handlePatternProcessed = useCallback((nextPattern: Pattern) => {
+    clearPinnedColorSelection();
     setPatternEditState(createPatternEditState(nextPattern, mardPalette));
-  }, []);
+  }, [clearPinnedColorSelection]);
   const handlePatternCleared = useCallback(() => {
+    clearPinnedColorSelection();
     setPatternEditState(null);
-  }, []);
+    void clearLastWorkspaceRecord();
+  }, [clearPinnedColorSelection]);
   const {
     longestEdge,
     fileName,
@@ -140,6 +168,7 @@ export function App() {
     ditherMode,
     smoothingLevel,
     maxColorCount,
+    processedWorkspace,
     onFileChange,
     onFileDrop,
     onFileDragEnter,
@@ -147,6 +176,7 @@ export function App() {
     onFileDragLeave,
     onLongestEdgeChange,
     onPatternAdjustmentChange,
+    restorePatternWorkspace,
   } = usePatternProcessing({
     onPatternProcessed: handlePatternProcessed,
     onPatternCleared: handlePatternCleared,
@@ -174,19 +204,132 @@ export function App() {
     [interfaceStyleLabel],
   );
 
-  const setGridFocusedColorCode = useCallback((colorCode: string | null) => {
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function restoreLastWorkspace() {
+      const restoredWorkspace = await readLastWorkspaceRecord();
+      if (isCancelled || !restoredWorkspace) {
+        return;
+      }
+
+      const restoredSourceFile = new File([restoredWorkspace.sourceImage], restoredWorkspace.sourceFileName, {
+        type: restoredWorkspace.sourceMimeType || restoredWorkspace.sourceImage.type,
+        lastModified: restoredWorkspace.updatedAt,
+      });
+      restorePatternWorkspace({
+        sourceFile: restoredSourceFile,
+        sourceImageSize: restoredWorkspace.sourceImageSize,
+        preferences: restoredWorkspace.preferences,
+        pattern: restoredWorkspace.basePattern,
+      });
+      clearPinnedColorSelection();
+      setPatternEditState(createPatternEditState(restoredWorkspace.basePattern, mardPalette, { overrides: restoredWorkspace.overrides }));
+    }
+
+    void restoreLastWorkspace();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [clearPinnedColorSelection, restorePatternWorkspace]);
+
+  useEffect(() => {
+    if (!processedWorkspace || !patternEditState) {
+      return;
+    }
+
+    void saveLastWorkspaceRecord({
+      sourceImage: processedWorkspace.sourceFile,
+      sourceFileName: processedWorkspace.sourceFile.name,
+      sourceMimeType: processedWorkspace.sourceFile.type,
+      sourceImageSize: processedWorkspace.sourceImageSize,
+      basePattern: processedWorkspace.pattern,
+      overrides: patternEditState.overrides,
+      preferences: processedWorkspace.preferences,
+    });
+  }, [patternEditState, processedWorkspace]);
+
+  const applyGridFocusedColorCode = useCallback((colorCode: string | null, options: { force?: boolean } = {}) => {
     const grid = patternGridRef.current;
     if (!grid) {
       return;
     }
 
-    if (colorCode) {
-      grid.dataset.focusedColorCode = colorCode;
+    const nextColorCode = colorCode ?? null;
+    const focusChanges = patternGridColorFocusClassChanges(focusedColorCodeRef.current, nextColorCode, patternGridColorCellIndexRef.current, options);
+
+    for (const cell of focusChanges.removeItems) {
+      cell.classList.remove("is-focused-color");
+    }
+
+    for (const cell of focusChanges.addItems) {
+      cell.classList.add("is-focused-color");
+    }
+
+    if (nextColorCode) {
+      grid.dataset.colorFocus = "active";
+      grid.dataset.colorFocusCode = nextColorCode;
+    } else {
+      delete grid.dataset.colorFocus;
+      delete grid.dataset.colorFocusCode;
+    }
+
+    focusedColorCodeRef.current = nextColorCode;
+  }, []);
+
+  const syncPatternGridColorFocus = useCallback(() => {
+    const nextFocusedColorCode = pinnedColorCodeRef.current ?? focusedColorCodeRef.current;
+    pendingFocusedColorCodeRef.current = null;
+    if (focusFrameRef.current !== null) {
+      if (typeof cancelAnimationFrame !== "undefined") {
+        cancelAnimationFrame(focusFrameRef.current);
+      }
+      focusFrameRef.current = null;
+    }
+
+    const grid = patternGridRef.current;
+    if (!grid) {
+      patternGridColorCellIndexRef.current = new Map();
+      focusedColorCodeRef.current = null;
       return;
     }
 
-    delete grid.dataset.focusedColorCode;
-  }, []);
+    for (const cell of grid.querySelectorAll<HTMLElement>(".pattern-cell.is-focused-color")) {
+      cell.classList.remove("is-focused-color");
+    }
+
+    delete grid.dataset.colorFocus;
+    delete grid.dataset.colorFocusCode;
+    focusedColorCodeRef.current = null;
+    patternGridColorCellIndexRef.current = buildPatternGridColorCellIndex(
+      [...grid.querySelectorAll<HTMLElement>(".pattern-cell[data-color-code]")].map((cell) => ({
+        colorCode: cell.dataset.colorCode,
+        item: cell,
+      })),
+    );
+    applyGridFocusedColorCode(nextFocusedColorCode, { force: true });
+  }, [applyGridFocusedColorCode]);
+
+  const setGridFocusedColorCode = useCallback((colorCode: string | null) => {
+    pendingFocusedColorCodeRef.current = colorCode;
+
+    if (focusFrameRef.current !== null) {
+      return;
+    }
+
+    if (typeof requestAnimationFrame === "undefined") {
+      applyGridFocusedColorCode(pendingFocusedColorCodeRef.current);
+      pendingFocusedColorCodeRef.current = null;
+      return;
+    }
+
+    focusFrameRef.current = requestAnimationFrame(() => {
+      focusFrameRef.current = null;
+      applyGridFocusedColorCode(pendingFocusedColorCodeRef.current);
+      pendingFocusedColorCodeRef.current = null;
+    });
+  }, [applyGridFocusedColorCode]);
 
   const handlePreviewColorChange = useCallback(
     (colorCode: string | null) => {
@@ -203,8 +346,8 @@ export function App() {
     (colorCode: string) => {
       const nextPinnedColorCode = pinnedColorCodeRef.current === colorCode ? null : colorCode;
       pinnedColorCodeRef.current = nextPinnedColorCode;
+      setPinnedColorCode(nextPinnedColorCode);
       setGridFocusedColorCode(nextPinnedColorCode);
-      return nextPinnedColorCode;
     },
     [setGridFocusedColorCode],
   );
@@ -223,9 +366,19 @@ export function App() {
   }, [interfaceStyle]);
 
   useEffect(() => {
-    pinnedColorCodeRef.current = null;
-    setGridFocusedColorCode(null);
-  }, [effectivePattern, setGridFocusedColorCode]);
+    syncPatternGridColorFocus();
+  }, [effectivePattern, syncPatternGridColorFocus]);
+
+  useEffect(() => {
+    return () => {
+      if (focusFrameRef.current !== null) {
+        if (typeof cancelAnimationFrame !== "undefined") {
+          cancelAnimationFrame(focusFrameRef.current);
+        }
+        focusFrameRef.current = null;
+      }
+    };
+  }, []);
 
   function onUploadKeyDown(event: KeyboardEvent<HTMLLabelElement>) {
     if (event.key === "Enter" || event.key === " ") {
@@ -319,11 +472,6 @@ export function App() {
         </div>
       </section>
 
-      {isProcessing ? (
-        <p role="status" aria-live="polite" className="border-t border-border bg-muted px-3 py-2 text-sm font-semibold text-muted-foreground sm:px-4 lg:px-6">
-          {t("processingImage")}
-        </p>
-      ) : null}
       <section className="px-3 py-4 sm:px-4 lg:px-6" aria-busy={isProcessing}>
         {effectivePattern && patternEditState ? (
           <div className="app-workspace-with-rail grid gap-4 xl:items-stretch">
@@ -343,12 +491,15 @@ export function App() {
               onEditStateChange={(updater) => setPatternEditState((currentState) => (currentState ? updater(currentState) : currentState))}
               xLabels={xLabels}
               gridRef={patternGridRef}
+              pinnedColorCode={pinnedColorCode}
+              onGridDisplayOptionsChange={syncPatternGridColorFocus}
             />
             {previewUrl ? (
               <PatternSideRail
                 fileName={fileName}
                 pattern={effectivePattern}
                 previewUrl={previewUrl}
+                pinnedColorCode={pinnedColorCode}
                 onPreviewColorChange={handlePreviewColorChange}
                 onPinnedColorToggle={handlePinnedColorToggle}
               />
@@ -553,6 +704,7 @@ function PatternAdjustmentControls({
           onChange={(value) => onChange({ colorDistanceMode: normalizeColorDistanceMode(value) })}
           describedBy={colorDistanceDescriptionId}
           className="w-full justify-between text-xs"
+          selectedLabelClassName="pointer-events-none min-w-0 flex-1 truncate text-center"
           options={colorDistanceModes.map((mode) => ({
             value: mode,
             label: getColorDistanceModeLabel(mode, t),
@@ -576,6 +728,7 @@ function PatternAdjustmentControls({
           onChange={(value) => onChange({ ditherMode: normalizeDitherMode(value) })}
           describedBy={ditherDescriptionId}
           className="w-full justify-between text-xs"
+          selectedLabelClassName="pointer-events-none min-w-0 flex-1 truncate text-center"
           options={ditherModes.map((mode) => ({
             value: mode,
             label: getDitherModeLabel(mode, t),

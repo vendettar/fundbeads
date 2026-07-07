@@ -2,17 +2,12 @@ import type { ChangeEvent, DragEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  defaultColorDistanceMode,
-  defaultDitherMode,
-  defaultMaxColorCount,
-  defaultSmoothingLevel,
   imageFileToPattern,
   normalizeColorDistanceMode,
   normalizeDitherMode,
   normalizeMaxColorCount,
   normalizePatternDimension,
   normalizeSmoothingLevel,
-  patternLongestEdgePresets,
   type ColorDistanceMode,
   type DitherMode,
   type MaxColorCount,
@@ -20,12 +15,14 @@ import {
   type PatternProcessingOptions,
   type SourceImageSize,
 } from "./pattern";
+import { defaultPatternPreferences, normalizePatternPreferences, readStoredPatternPreferences, writeStoredPatternPreferences, type PatternPreferences } from "./pattern-preferences";
 
 const acceptedImageMimeTypes = ["image/jpeg", "image/png", "image/webp"] as const;
 const acceptedImageExtensions = [".jpg", ".jpeg", ".png", ".webp"] as const;
+export const maxUploadFileSizeBytes = 10 * 1024 * 1024;
 const dimensionReprocessDelayMs = 140;
 
-export type PatternProcessingErrorKey = "unsupportedImage" | "processFailed";
+export type PatternProcessingErrorKey = "unsupportedImage" | "fileTooLarge" | "processFailed";
 
 export type ProcessFileOptions = {
   refreshPreview?: boolean;
@@ -43,9 +40,23 @@ export type PatternAdjustmentOptions = {
   maxColorCount: MaxColorCount;
 };
 
+export type PatternWorkspaceRestoreInput = {
+  sourceFile: File;
+  sourceImageSize: SourceImageSize | null;
+  preferences: PatternPreferences;
+  pattern: Pattern;
+};
+
 type UsePatternProcessingOptions = {
   onPatternProcessed: (pattern: Pattern) => void;
   onPatternCleared: () => void;
+};
+
+export type ProcessedPatternWorkspace = {
+  sourceFile: File;
+  sourceImageSize: SourceImageSize | null;
+  pattern: Pattern;
+  preferences: PatternPreferences;
 };
 
 export function isAcceptedImageFile(file: Pick<File, "name" | "type">) {
@@ -62,6 +73,10 @@ export function isAcceptedImageFile(file: Pick<File, "name" | "type">) {
   return acceptedImageExtensions.some((extension) => fileName.endsWith(extension));
 }
 
+export function isWithinUploadFileSizeLimit(file: Pick<File, "size">) {
+  return file.size <= maxUploadFileSizeBytes;
+}
+
 function samePatternProcessingOptions(first: PatternProcessingOptions, second: PatternProcessingOptions) {
   return (
     first.colorDistanceMode === second.colorDistanceMode &&
@@ -72,17 +87,20 @@ function samePatternProcessingOptions(first: PatternProcessingOptions, second: P
 }
 
 export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: UsePatternProcessingOptions) {
-  const [longestEdge, setLongestEdge] = useState(patternLongestEdgePresets[0]);
+  const [initialPreferences] = useState(() => readStoredPatternPreferences() ?? defaultPatternPreferences);
+  const [longestEdge, setLongestEdge] = useState(initialPreferences.longestEdge);
   const [fileName, setFileName] = useState("");
   const [errorKey, setErrorKey] = useState<PatternProcessingErrorKey | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [sourceImageSize, setSourceImageSize] = useState<SourceImageSize | null>(null);
-  const [colorDistanceMode, setColorDistanceMode] = useState<ColorDistanceMode>(defaultColorDistanceMode);
-  const [ditherMode, setDitherMode] = useState<DitherMode>(defaultDitherMode);
-  const [smoothingLevel, setSmoothingLevel] = useState(defaultSmoothingLevel);
-  const [maxColorCount, setMaxColorCount] = useState<MaxColorCount>(defaultMaxColorCount);
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [processedWorkspace, setProcessedWorkspace] = useState<ProcessedPatternWorkspace | null>(null);
+  const [colorDistanceMode, setColorDistanceMode] = useState<ColorDistanceMode>(initialPreferences.colorDistanceMode);
+  const [ditherMode, setDitherMode] = useState<DitherMode>(initialPreferences.ditherMode);
+  const [smoothingLevel, setSmoothingLevel] = useState(initialPreferences.smoothingLevel);
+  const [maxColorCount, setMaxColorCount] = useState<MaxColorCount>(initialPreferences.maxColorCount);
   const activeFileRef = useRef<File | null>(null);
   const processRunIdRef = useRef(0);
   const processingAbortControllerRef = useRef<AbortController | null>(null);
@@ -138,6 +156,8 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
       if (!isAcceptedImageFile(file)) {
         cancelActiveProcessing();
         activeFileRef.current = null;
+        setSourceFile(null);
+        setProcessedWorkspace(null);
         setErrorKey("unsupportedImage");
         onPatternCleared();
         setSourceImageSize(null);
@@ -147,7 +167,22 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
         return;
       }
 
+      if (!isWithinUploadFileSizeLimit(file)) {
+        cancelActiveProcessing();
+        activeFileRef.current = null;
+        setSourceFile(null);
+        setProcessedWorkspace(null);
+        setErrorKey("fileTooLarge");
+        onPatternCleared();
+        setSourceImageSize(null);
+        setFileName("");
+        setIsProcessing(false);
+        clearPreviewUrl();
+        return;
+      }
+
       activeFileRef.current = file;
+      setSourceFile(file);
       setIsProcessing(true);
       setErrorKey(null);
       setFileName(file.name);
@@ -157,10 +192,12 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
       }
 
       try {
+        let processedSourceImageSize: SourceImageSize | null = null;
         const nextPattern = await imageFileToPattern(
           file,
           normalizedLongestEdge,
           (nextSourceImageSize) => {
+            processedSourceImageSize = nextSourceImageSize;
             if (processRunIdRef.current === processRunId) {
               setSourceImageSize(nextSourceImageSize);
             }
@@ -169,6 +206,18 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
           abortController.signal,
         );
         if (processRunIdRef.current === processRunId) {
+          setProcessedWorkspace({
+            sourceFile: file,
+            sourceImageSize: processedSourceImageSize,
+            pattern: nextPattern,
+            preferences: normalizePatternPreferences({
+              longestEdge: normalizedLongestEdge,
+              colorDistanceMode: nextProcessingOptions.colorDistanceMode,
+              ditherMode: nextProcessingOptions.ditherMode,
+              smoothingLevel: nextProcessingOptions.smoothingLevel,
+              maxColorCount: nextProcessingOptions.maxColorCount,
+            }) ?? defaultPatternPreferences,
+          });
           onPatternProcessed(nextPattern);
         }
       } catch (error) {
@@ -178,6 +227,8 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
 
         if (processRunIdRef.current === processRunId) {
           activeFileRef.current = null;
+          setSourceFile(null);
+          setProcessedWorkspace(null);
           onPatternCleared();
           setSourceImageSize(null);
           clearPreviewUrl();
@@ -227,6 +278,7 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
       }
 
       setLongestEdge(normalizedLongestEdge);
+      writeStoredPatternPreferences(undefined, { longestEdge: normalizedLongestEdge, ...processingOptions });
 
       const file = activeFileRef.current;
       if (!file) {
@@ -261,12 +313,42 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
       setDitherMode(normalizedOptions.ditherMode);
       setSmoothingLevel(normalizedOptions.smoothingLevel);
       setMaxColorCount(normalizedOptions.maxColorCount);
+      writeStoredPatternPreferences(undefined, { longestEdge, ...normalizedOptions });
 
       if (activeFileRef.current) {
         schedulePatternReprocess(longestEdge, normalizedOptions);
       }
     },
     [colorDistanceMode, ditherMode, longestEdge, maxColorCount, processingOptions, schedulePatternReprocess, smoothingLevel],
+  );
+
+  const restorePatternWorkspace = useCallback(
+    ({ sourceFile: nextSourceFile, sourceImageSize: nextSourceImageSize, preferences, pattern }: PatternWorkspaceRestoreInput) => {
+      const restoredPreferences = normalizePatternPreferences(preferences) ?? defaultPatternPreferences;
+      clearPendingDimensionReprocess();
+      cancelActiveProcessing();
+      processRunIdRef.current += 1;
+      activeFileRef.current = nextSourceFile;
+      setSourceFile(nextSourceFile);
+      setErrorKey(null);
+      setIsProcessing(false);
+      setFileName(nextSourceFile.name);
+      setSourceImageSize(nextSourceImageSize);
+      setLongestEdge(restoredPreferences.longestEdge);
+      setColorDistanceMode(restoredPreferences.colorDistanceMode);
+      setDitherMode(restoredPreferences.ditherMode);
+      setSmoothingLevel(restoredPreferences.smoothingLevel);
+      setMaxColorCount(restoredPreferences.maxColorCount);
+      setProcessedWorkspace({
+        sourceFile: nextSourceFile,
+        sourceImageSize: nextSourceImageSize,
+        pattern,
+        preferences: restoredPreferences,
+      });
+      writeStoredPatternPreferences(undefined, restoredPreferences);
+      updatePreviewUrl(nextSourceFile);
+    },
+    [cancelActiveProcessing, clearPendingDimensionReprocess, updatePreviewUrl],
   );
 
   const onFileDrop = useCallback(
@@ -321,6 +403,8 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
     isProcessing,
     isDraggingFile,
     previewUrl,
+    sourceFile,
+    processedWorkspace,
     sourceImageSize,
     colorDistanceMode,
     ditherMode,
@@ -334,6 +418,7 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
     onFileDragLeave,
     onLongestEdgeChange,
     onPatternAdjustmentChange,
+    restorePatternWorkspace,
   };
 }
 
