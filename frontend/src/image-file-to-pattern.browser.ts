@@ -9,17 +9,19 @@ export async function imageFileToPattern(
   longestEdge: number,
   onSourceImageSize?: (source: SourceImageSize) => void,
   options: PatternProcessingOptions = {},
+  abortSignal?: AbortSignal,
 ): Promise<Pattern> {
+  throwIfAborted(abortSignal);
   const reportSourceImageSize = once(onSourceImageSize);
 
   if (canUseImageProcessingWorker()) {
-    const workerResult = await imageFileToPatternInWorker(file, longestEdge, reportSourceImageSize, options);
+    const workerResult = await imageFileToPatternInWorker(file, longestEdge, reportSourceImageSize, options, abortSignal);
     if (workerResult.type === "success") {
       return workerResult.pattern;
     }
   }
 
-  return imageFileToPatternOnMainThread(file, longestEdge, reportSourceImageSize, options);
+  return imageFileToPatternOnMainThread(file, longestEdge, reportSourceImageSize, options, abortSignal);
 }
 
 export async function imageFileToPatternOnMainThread(
@@ -27,11 +29,14 @@ export async function imageFileToPatternOnMainThread(
   longestEdge: number,
   onSourceImageSize?: (source: SourceImageSize) => void,
   options: PatternProcessingOptions = {},
+  abortSignal?: AbortSignal,
 ): Promise<Pattern> {
+  throwIfAborted(abortSignal);
   const bitmap = await createImageBitmap(file);
 
   try {
-    const { pattern, sourceImageSize } = imageBitmapToPattern(bitmap, longestEdge, createDocumentCanvas, options);
+    const { pattern, sourceImageSize } = imageBitmapToPattern(bitmap, longestEdge, createDocumentCanvas, options, abortSignal);
+    throwIfAborted(abortSignal);
     onSourceImageSize?.(sourceImageSize);
     return pattern;
   } finally {
@@ -57,7 +62,12 @@ function imageFileToPatternInWorker(
   longestEdge: number,
   onSourceImageSize: (source: SourceImageSize) => void,
   options: PatternProcessingOptions,
+  abortSignal: AbortSignal | undefined,
 ): Promise<ImageFileToPatternWorkerResult> {
+  if (abortSignal?.aborted) {
+    return Promise.reject(abortError());
+  }
+
   let worker: Worker;
   try {
     worker = new Worker(new URL("./image-file-to-pattern.worker.ts", import.meta.url), {
@@ -72,13 +82,18 @@ function imageFileToPatternInWorker(
     const requestId = createWorkerRequestId();
     let settled = false;
 
+    function cleanup() {
+      abortSignal?.removeEventListener("abort", abort);
+      worker.terminate();
+    }
+
     function settle(result: ImageFileToPatternWorkerResult) {
       if (settled) {
         return;
       }
 
       settled = true;
-      worker.terminate();
+      cleanup();
       resolve(result);
     }
 
@@ -88,9 +103,15 @@ function imageFileToPatternInWorker(
       }
 
       settled = true;
-      worker.terminate();
+      cleanup();
       reject(error);
     }
+
+    function abort() {
+      fail(abortError());
+    }
+
+    abortSignal?.addEventListener("abort", abort, { once: true });
 
     worker.onmessage = (event: MessageEvent<ImageFileToPatternWorkerResponse>) => {
       const message = event.data;
@@ -174,4 +195,16 @@ function once<T>(callback: ((value: T) => void) | undefined): (value: T) => void
 
 function createWorkerRequestId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+}
+
+function throwIfAborted(signal: AbortSignal | undefined) {
+  if (!signal?.aborted) {
+    return;
+  }
+
+  throw abortError();
+}
+
+function abortError() {
+  return new DOMException("Image processing was aborted.", "AbortError");
 }

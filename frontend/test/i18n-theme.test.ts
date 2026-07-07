@@ -311,6 +311,10 @@ describe("interface style source contracts", () => {
     expect(stylesSource).toContain(".pattern-cell-code");
     expect(stylesSource).toContain(".pattern-axis-label");
     expect(stylesSource).toContain(".pattern-axis-corner");
+    expect(stylesSource).toContain(".app-workspace-with-rail");
+    expect(stylesSource).toContain(".pattern-grid-viewport");
+    expect(stylesSource).toContain(".color-usage-columns-compact");
+    expect(stylesSource).toContain(".layer-modal-backdrop");
     expect(appSource).not.toMatch(/\btext-\[[^\]]+\]/);
     expect(appSource).not.toContain("h-[22px]");
     expect(appSource).not.toContain("w-[22px]");
@@ -338,11 +342,21 @@ describe("interface style source contracts", () => {
 
 describe("preference dropdown contract", () => {
   it("positions custom preference menus below the trigger", () => {
-    const placement = getPreferenceMenuPlacement({ bottom: 42, left: 12, width: 80 });
+    const placement = getPreferenceMenuPlacement({ bottom: 42, left: 12, width: 80 }, { innerWidth: 320, innerHeight: 480 });
 
     expect(placement.top).toBeGreaterThan(42);
     expect(placement.left).toBe(12);
     expect(placement.minWidth).toBe(96);
+    expect(placement.maxHeight).toBeGreaterThan(0);
+  });
+
+  it("clamps custom preference menus to the viewport and flips above bottom-edge triggers", () => {
+    const rightEdgePlacement = getPreferenceMenuPlacement({ bottom: 42, left: 280, width: 120 }, { innerWidth: 320, innerHeight: 480 });
+    const bottomEdgePlacement = getPreferenceMenuPlacement({ top: 420, bottom: 460, left: 12, width: 120 }, { innerWidth: 320, innerHeight: 480 });
+
+    expect(rightEdgePlacement.left + rightEdgePlacement.minWidth).toBeLessThanOrEqual(312);
+    expect(bottomEdgePlacement.top).toBeLessThan(420);
+    expect(bottomEdgePlacement.maxHeight).toBeLessThanOrEqual(320);
   });
 
   it("wraps keyboard navigation through available preference options", () => {
@@ -355,6 +369,7 @@ describe("preference dropdown contract", () => {
   it("uses a styled custom menu instead of native select options", () => {
     expect(preferenceSelectSource).toContain("createPortal");
     expect(preferenceSelectSource).toContain("preference-select-menu");
+    expect(preferenceSelectSource).not.toContain("z-50");
     expect(preferenceSelectSource).toContain("aria-haspopup=\"listbox\"");
     expect(preferenceSelectSource).toContain("aria-activedescendant={isOpen ? activeOptionId : undefined}");
     expect(preferenceSelectSource).toContain("aria-activedescendant={activeOptionId}");
@@ -362,6 +377,7 @@ describe("preference dropdown contract", () => {
     expect(preferenceSelectSource).toContain('event.key === "Home"');
     expect(preferenceSelectSource).toContain('event.key === "End"');
     expect(preferenceSelectSource).toContain('event.key === "Tab"');
+    expect(preferenceSelectSource).toContain("maxHeight: menuPlacement.maxHeight");
     expect(preferenceSelectSource).not.toContain("<select");
     expect(preferenceSelectSource).not.toContain("<option");
   });
@@ -549,6 +565,8 @@ describe("pattern editing source contract", () => {
     expect(rowSource).not.toContain("w-[22px]");
     expect(patternGridBoardSource).toContain("patternGridLabel");
     expect(patternGridBoardSource).toContain("patternGridKeyboardHint");
+    expect(patternGridBoardSource).toContain("pattern-guide-x-major");
+    expect(patternGridBoardSource).toContain("pattern-guide-y-major");
   });
 
   it("memoizes grid rows and avoids redundant reprocessing work", () => {
@@ -582,7 +600,8 @@ describe("pattern editing source contract", () => {
     expect(patternGridSource).toContain("setReplaceSourceCode(pickedColorCode)");
     expect(patternGridSource).toContain("setReplaceSourceCode(colorCode)");
     expect(patternGridSource).toContain("const replaceSourceColor = pattern.usage.find(({ color }) => color.code === replaceSourceCode)?.color");
-    expect(patternGridSource).toContain("const replaceTargetColor = mardPalette.find((color) => color.code === replaceTargetCode)");
+    expect(patternGridSource).toContain("const mardPaletteByCode = new Map");
+    expect(patternGridSource).toContain("const replaceTargetColor = mardPaletteByCode.get(replaceTargetCode)");
     expect(patternEditToolbarSource).toContain("backgroundColor: replaceSourceColor ? `rgb(${replaceSourceColor.r} ${replaceSourceColor.g} ${replaceSourceColor.b})` : \"transparent\"");
     expect(patternEditToolbarSource).toContain("backgroundColor: replaceTargetColor ? `rgb(${replaceTargetColor.r} ${replaceTargetColor.g} ${replaceTargetColor.b})` : \"transparent\"");
   });
@@ -638,6 +657,8 @@ describe("upload workflow source contracts", () => {
     expect(imageFileToPatternSource).toContain('name: "image-file-to-pattern"');
     expect(imageFileToPatternSource).toContain("OffscreenCanvas");
     expect(imageFileToPatternSource).toContain("imageFileToPatternOnMainThread");
+    expect(imageFileToPatternSource).toContain("AbortSignal");
+    expect(usePatternProcessingSource).toContain("cancelActiveProcessing");
     expect(imageFileToPatternWorkerSource).toContain("workerSelf.onmessage");
     expect(imageFileToPatternWorkerSource).toContain("postWorkerMessage");
     expect(imageFileToPatternWorkerSource).toContain("OffscreenCanvas");
@@ -647,8 +668,8 @@ describe("upload workflow source contracts", () => {
   it("moves aspect-ratio output controls into a left workspace toolbar matching the preview rail", () => {
     expect(appSource).toContain("function PatternLongestEdgeToolbar");
     expect(appSource).toContain("grid-size-toolbar");
-    expect(appSource).toContain("xl:grid-cols-[260px_minmax(0,1fr)_260px]");
-    expect(appSource).toContain("xl:grid-cols-[260px_minmax(0,1fr)]");
+    expect(appSource).toContain("app-workspace-with-rail");
+    expect(appSource).toContain("app-workspace-upload");
     expect(appSource.indexOf("function PatternLongestEdgeToolbar")).toBeGreaterThan(appSource.indexOf("return ("));
     expect(appSource.indexOf("<PatternLongestEdgeToolbar")).toBeLessThan(appSource.indexOf("<UploadWorkspace"));
     expect(appSource).toContain('import { UploadWorkspace } from "./upload-workspace"');
@@ -743,7 +764,7 @@ describe("upload workflow source contracts", () => {
     expect(usePatternProcessingSource).toContain("activeFileRef.current");
   });
 
-  it("guards async pattern updates against stale upload results", () => {
+  it("guards async pattern updates against outdated upload results", () => {
     expect(usePatternProcessingSource).toContain("processRunIdRef");
     expect(usePatternProcessingSource).toContain("processRunIdRef.current");
   });
@@ -790,7 +811,7 @@ describe("upload workflow source contracts", () => {
     expect(patternSideRailSource).toContain("export function PatternSideRail");
     expect(patternSideRailSource).toContain("function PatternStatsCard");
     expect(patternSideRailSource).toContain("xl:self-stretch");
-    expect(patternSideRailSource).toContain("grid-rows-[auto_auto_minmax(0,1fr)]");
+    expect(patternSideRailSource).toContain("pattern-side-rail");
     expect(patternSideRailSource).toContain("overflow-hidden");
     expect(patternSideRailSource).toContain("xl:h-full");
     expect(patternSideRailSource).toContain("xl:min-h-0");

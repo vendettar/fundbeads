@@ -11,11 +11,34 @@ export type SelectOption = {
   description?: string;
 };
 
-export function getPreferenceMenuPlacement(rect: Pick<DOMRect, "bottom" | "left" | "width">) {
+type PreferenceMenuAnchorRect = Pick<DOMRect, "bottom" | "left" | "width"> & Partial<Pick<DOMRect, "top">>;
+type PreferenceMenuViewport = Pick<Window, "innerWidth" | "innerHeight">;
+
+const preferenceMenuOffset = 6;
+const preferenceMenuViewportMargin = 8;
+const preferenceMenuMinWidth = 96;
+const preferenceMenuPreferredMaxHeight = 320;
+const preferenceMenuMinFlipHeight = 160;
+
+export function getPreferenceMenuPlacement(
+  rect: PreferenceMenuAnchorRect,
+  viewport: PreferenceMenuViewport = typeof window === "undefined" ? { innerWidth: 1024, innerHeight: 768 } : window,
+) {
+  const minWidth = Math.max(preferenceMenuMinWidth, Math.ceil(rect.width));
+  const maxLeft = Math.max(preferenceMenuViewportMargin, viewport.innerWidth - preferenceMenuViewportMargin - minWidth);
+  const left = Math.min(Math.max(preferenceMenuViewportMargin, Math.floor(rect.left)), maxLeft);
+  const belowTop = Math.ceil(rect.bottom + preferenceMenuOffset);
+  const belowHeight = Math.max(0, viewport.innerHeight - preferenceMenuViewportMargin - belowTop);
+  const anchorTop = rect.top ?? rect.bottom;
+  const aboveHeight = Math.max(0, anchorTop - preferenceMenuViewportMargin - preferenceMenuOffset);
+  const shouldFlip = belowHeight < preferenceMenuMinFlipHeight && aboveHeight > belowHeight;
+  const maxHeight = Math.max(1, Math.min(preferenceMenuPreferredMaxHeight, shouldFlip ? aboveHeight : belowHeight));
+
   return {
-    top: Math.ceil(rect.bottom + 6),
-    left: Math.floor(rect.left),
-    minWidth: Math.max(96, Math.ceil(rect.width)),
+    top: shouldFlip ? Math.max(preferenceMenuViewportMargin, Math.floor(anchorTop - preferenceMenuOffset - maxHeight)) : belowTop,
+    left,
+    minWidth,
+    maxHeight,
   };
 }
 
@@ -48,7 +71,7 @@ export function PreferenceSelect({
   const menuId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [menuPlacement, setMenuPlacement] = useState({ top: 0, left: 0, minWidth: 96 });
+  const [menuPlacement, setMenuPlacement] = useState({ top: 0, left: 0, minWidth: preferenceMenuMinWidth, maxHeight: preferenceMenuPreferredMaxHeight });
   const selectedOption = options.find((option) => option.value === value);
   const selectedIndex = Math.max(
     0,
@@ -211,11 +234,12 @@ export function PreferenceSelect({
               role="listbox"
               aria-label={label}
               aria-activedescendant={activeOptionId}
-              className="preference-select-menu fixed z-50 grid max-w-[min(22rem,calc(100vw-1rem))] gap-1 rounded-md border border-border bg-card p-1 text-sm font-semibold text-foreground shadow-panel"
+              className="preference-select-menu fixed grid overflow-y-auto rounded-md border border-border bg-card p-1 text-sm font-semibold text-foreground shadow-panel"
               style={{
                 top: menuPlacement.top,
                 left: menuPlacement.left,
                 minWidth: menuPlacement.minWidth,
+                maxHeight: menuPlacement.maxHeight,
               }}
             >
               {options.map((option, optionIndex) => (

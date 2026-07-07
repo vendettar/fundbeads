@@ -261,7 +261,7 @@ describe("pattern edit helpers", () => {
     expect(nextEdit.redoStack).toEqual([]);
   });
 
-  it("reinitializes from a new generated pattern without stale overrides or history", () => {
+  it("reinitializes from a new generated pattern without outdated overrides or history", () => {
     const first = createPatternEditState(createPattern(), colors);
     const edited = paintPatternCell(first, 0, paintD.code);
     const second = createPatternEditState(createPattern([paintE.code, paintE.code, paintE.code, paintE.code]), colors);

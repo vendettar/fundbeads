@@ -32,7 +32,9 @@ export function imageBitmapToPattern(
   longestEdge: number,
   createCanvas: PatternCanvasFactory,
   options: PatternProcessingOptions = {},
+  abortSignal?: AbortSignal,
 ): ImageBitmapPatternResult {
+  throwIfAborted(abortSignal);
   const sourceImageSize = { width: bitmap.width, height: bitmap.height };
   const { width, height } = dimensionsForAspectRatio(sourceImageSize, longestEdge);
   const canvas = createCanvas(width, height);
@@ -51,11 +53,16 @@ export function imageBitmapToPattern(
   context.clearRect(0, 0, width, height);
   context.drawImage(bitmap, 0, 0, width, height);
   context.filter = "none";
+  throwIfAborted(abortSignal);
 
   const pixels = context.getImageData(0, 0, width, height).data;
   const sourcePixels: Rgb[] = [];
 
   for (let y = 0; y < height; y += 1) {
+    if (y % 8 === 0) {
+      throwIfAborted(abortSignal);
+    }
+
     for (let x = 0; x < width; x += 1) {
       const offset = (y * width + x) * 4;
       const alpha = pixels[offset + 3] / 255;
@@ -68,4 +75,12 @@ export function imageBitmapToPattern(
     pattern: patternPixelsToPattern(sourcePixels, { width, height }, mardPalette, options),
     sourceImageSize,
   };
+}
+
+function throwIfAborted(signal: AbortSignal | undefined) {
+  if (!signal?.aborted) {
+    return;
+  }
+
+  throw new DOMException("Image processing was aborted.", "AbortError");
 }

@@ -85,6 +85,7 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
   const [maxColorCount, setMaxColorCount] = useState<MaxColorCount>(defaultMaxColorCount);
   const activeFileRef = useRef<File | null>(null);
   const processRunIdRef = useRef(0);
+  const processingAbortControllerRef = useRef<AbortController | null>(null);
   const previewUrlRef = useRef("");
   const pendingDimensionTimerRef = useRef<number | null>(null);
   const dragDepthRef = useRef(0);
@@ -119,14 +120,23 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
     setPreviewUrl(nextPreviewUrl);
   }, []);
 
+  const cancelActiveProcessing = useCallback(() => {
+    processingAbortControllerRef.current?.abort();
+    processingAbortControllerRef.current = null;
+  }, []);
+
   const processFile = useCallback(
     async (file: File, nextLongestEdge: number, { refreshPreview = true, processingOptions: nextProcessingOptions = processingOptions }: ProcessFileOptions = {}) => {
       clearPendingDimensionReprocess();
+      cancelActiveProcessing();
       const processRunId = processRunIdRef.current + 1;
       processRunIdRef.current = processRunId;
+      const abortController = new AbortController();
+      processingAbortControllerRef.current = abortController;
       const normalizedLongestEdge = normalizePatternDimension(nextLongestEdge);
 
       if (!isAcceptedImageFile(file)) {
+        cancelActiveProcessing();
         activeFileRef.current = null;
         setErrorKey("unsupportedImage");
         onPatternCleared();
@@ -156,11 +166,16 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
             }
           },
           nextProcessingOptions,
+          abortController.signal,
         );
         if (processRunIdRef.current === processRunId) {
           onPatternProcessed(nextPattern);
         }
-      } catch {
+      } catch (error) {
+        if (isAbortError(error) && processRunIdRef.current !== processRunId) {
+          return;
+        }
+
         if (processRunIdRef.current === processRunId) {
           activeFileRef.current = null;
           onPatternCleared();
@@ -170,11 +185,12 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
         }
       } finally {
         if (processRunIdRef.current === processRunId) {
+          processingAbortControllerRef.current = null;
           setIsProcessing(false);
         }
       }
     },
-    [clearPendingDimensionReprocess, clearPreviewUrl, onPatternCleared, onPatternProcessed, processingOptions, updatePreviewUrl],
+    [cancelActiveProcessing, clearPendingDimensionReprocess, clearPreviewUrl, onPatternCleared, onPatternProcessed, processingOptions, updatePreviewUrl],
   );
 
   const schedulePatternReprocess = useCallback(
@@ -289,12 +305,14 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
 
   useEffect(() => {
     return () => {
+      processRunIdRef.current += 1;
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current);
       }
+      cancelActiveProcessing();
       clearPendingDimensionReprocess();
     };
-  }, [clearPendingDimensionReprocess]);
+  }, [cancelActiveProcessing, clearPendingDimensionReprocess]);
 
   return {
     longestEdge,
@@ -317,4 +335,8 @@ export function usePatternProcessing({ onPatternProcessed, onPatternCleared }: U
     onLongestEdgeChange,
     onPatternAdjustmentChange,
   };
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
 }

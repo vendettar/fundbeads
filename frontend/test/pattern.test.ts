@@ -327,6 +327,37 @@ describe("pattern logic", () => {
     }
   });
 
+  it("aborts and terminates in-flight worker image processing", async () => {
+    const createdWorkers: FakeAbortWorker[] = [];
+
+    class FakeAbortWorker {
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onerror: ((event: Event) => void) | null = null;
+      postMessage = vi.fn();
+      terminate = vi.fn();
+
+      constructor() {
+        createdWorkers.push(this);
+      }
+    }
+
+    vi.stubGlobal("Worker", FakeAbortWorker);
+    vi.stubGlobal("OffscreenCanvas", function OffscreenCanvas() {});
+
+    try {
+      const abortController = new AbortController();
+      const promise = imageFileToPattern({ type: "image/png" } as File, 64, undefined, {}, abortController.signal);
+
+      expect(createdWorkers).toHaveLength(1);
+      abortController.abort();
+
+      await expect(promise).rejects.toMatchObject({ name: "AbortError" });
+      expect(createdWorkers[0].terminate).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("converts RGB to stable Oklab coordinates", () => {
     const black = toOklab({ r: 0, g: 0, b: 0 });
     const white = toOklab({ r: 255, g: 255, b: 255 });
