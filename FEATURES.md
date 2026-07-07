@@ -28,7 +28,8 @@ This file lists the current shipped feature surface. Planned items are not imple
 - Localized UI copy with stable MARD code labels and optional palette label overrides.
 - Theme selector with Classic, Midnight, Ocean, Candy, and Mono themes.
 - Interface style selector with Modern, Pixel, Glass Desk, and Arcade Cabinet UI modes.
-- Language, theme, and interface style preferences stored only in browser `localStorage` when available.
+- Language, theme, interface style, and generation-control preferences are stored only in browser `localStorage` when available.
+- The latest workspace is restored from browser-local IndexedDB after refresh: source image blob, effective generated pattern, source image size, and generation settings.
 - Static build and nginx Docker runtime.
 
 ## Current Limitations
@@ -36,7 +37,7 @@ This file lists the current shipped feature surface. Planned items are not imple
 - Palette matching uses the built-in MARD 221 RGB dataset with local distance and dither modes; it does not use remote palette services.
 - Dithered modes can create speckled charts and may increase bead-picking complexity.
 - Output dimensions are derived from the source image ratio and selected longest edge; the shorter side may be below `40` when the source ratio requires it. Fixed-size crop/drag framing is not implemented yet.
-- Manual edits are browser-session state only; history/draft/library UI and edit persistence are not implemented.
+- Manual edits are included in the latest restored workspace because the effective pattern is saved locally. Multi-item history, named drafts, offline library UI, and account sync are not implemented.
 - PDF export is a single-page image export of the current pattern preview, not a paginated assembly booklet.
 - Palette filtering is not implemented.
 - Very small screens may need zooming to read individual bead codes.

@@ -68,7 +68,7 @@ Named runtime themes live in normal application CSS as overrides for the same `-
 - The active color selector and replace controls may list MARD colors, but they commit stable MARD codes and do not translate those codes.
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, should zoom only while the pointer is over the pattern grid.
 - Error states must be visible without shifting the whole page.
-- Image processing status must be visible while work is in progress, use localized text, and expose status semantics such as `role="status"`, `aria-live`, or `aria-busy` where appropriate.
+- Image processing should not insert visible status text or banners that shift the page while work is in progress; keep busy state internal or on stable containers such as `aria-busy`.
 - Unsupported file errors should be direct and recoverable.
 - Language, theme, and interface style controls should use source-defined allowlists.
 - Unsupported stored preferences should fall back without throwing.

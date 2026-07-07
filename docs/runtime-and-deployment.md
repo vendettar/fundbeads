@@ -6,8 +6,8 @@ Fundbeads is built as static frontend assets. There is no backend service and no
 
 - **Browser app**: React/Vite code runs in the user's browser.
 - **Image processing**: JPG/PNG/WebP decoding, canvas sampling, palette matching, and counting happen locally in the browser.
-- **Preferences**: Language, theme, and interface style preferences use browser `localStorage` only when available.
-- **Local pattern persistence**: IndexedDB infrastructure can store compact, validated pattern records in the user's browser when explicitly called.
+- **Preferences**: Language, theme, interface style, and generation-control preferences use browser `localStorage` only when available.
+- **Local pattern persistence**: IndexedDB stores compact, validated pattern records and one latest-workspace record in the user's browser.
 - **Static assets**: Production builds produce `frontend/dist`.
 - **Docker runtime**: nginx serves the compiled static files.
 - **Cloudflare Pages runtime**: `frontend/public/_headers` and `frontend/public/_redirects` are copied into `frontend/dist` by Vite.
@@ -99,11 +99,12 @@ http://localhost:3000
 - There are no API routes.
 - There is no image upload endpoint.
 - There is no server-side database or server-side persistence.
-- Normal generation keeps uploaded images, generated patterns, and bead counts in browser memory.
+- Normal generation keeps uploaded images, generated patterns, and bead counts in browser-local memory and storage only.
 - The local pattern persistence module stores compact records in browser IndexedDB only when explicitly called by current or future UI flows.
-- Local pattern records store row-major MARD codes and usage counts; they do not store object URLs or automatically persist uploaded source images.
+- Local pattern records store row-major MARD codes and usage counts; they do not store object URLs or source image blobs.
+- The latest-workspace IndexedDB record stores one source image `Blob`, the current effective pattern, source image size, and generation preferences so refresh can restore the current workspace. Uploading a new image overwrites this single record; clearing the pattern removes it.
 - IndexedDB records are local to the user's browser. They are not account authority and are not synchronized to a server by the static runtime.
-- Language, theme, and interface style preference keys are optional browser-local state only.
+- Language, theme, interface style, and generation-control preference keys are optional browser-local state only.
 - Translations, theme ids, interface style ids, and display labels are bundled static source data.
 - There is no remote translation, remote theme, telemetry, CDN, or analytics dependency.
 

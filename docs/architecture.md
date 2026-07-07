@@ -46,7 +46,9 @@ There is no backend service. The production Docker image serves static files wit
 - `frontend/src/themes.tsx`: Theme allowlist, static theme ids, and theme preference provider.
 - `frontend/src/interface-style.tsx`: Interface style allowlist, static style ids, and interface style preference provider.
 - `frontend/src/browser-storage.ts`: Safe optional access to browser `localStorage`.
+- `frontend/src/pattern-preferences.ts`: Browser-local generation preference codec for longest edge, color matching, dithering, smoothing, and max-color settings.
 - `frontend/src/local-pattern-db.ts`: Browser-local IndexedDB infrastructure for compact, validated pattern records.
+- `frontend/src/last-workspace-db.ts`: Browser-local IndexedDB single-record latest workspace store with source image Blob, effective pattern, source image size, and generation preferences.
 - `frontend/src/pattern.ts`: Public facade for pattern dimensions, model, color matching, dithering, image processing, max-color, and readable text helpers.
 - `frontend/src/pattern-model.ts`: `Pattern`, `PatternCell`, `ColorUsage`, readable text color, cell conversion, and count summaries.
 - `frontend/src/pattern-processing.ts`: Source pixels to pattern conversion, dither application, max-color limiting, and usage aggregation.
@@ -83,9 +85,9 @@ There is no backend service. The production Docker image serves static files wit
 13. Usage counts are derived from effective cells with no-bead cells excluded.
 14. React renders the effective grid and summary.
 
-Language, theme, and interface style preferences are independent of pattern processing. They are read from browser `localStorage` when available, validated against source-defined allowlists, and ignored if storage is blocked or contains unsupported values.
+Language, theme, interface style, and generation-control preferences are independent of pattern processing. They are read from browser `localStorage` when available, validated against source-defined allowlists or numeric bounds, and ignored if storage is blocked or contains unsupported values.
 
-The local pattern persistence module is also independent of pattern generation. It stores compact pattern records in browser IndexedDB only when explicitly called by current or future UI flows. It stores row-major MARD codes and usage counts, not DOM snapshots, per-cell RGB copies, object URLs, account authority, or automatically persisted source images.
+The local pattern persistence modules are also independent of remote services. Compact pattern records store row-major MARD codes and usage counts, not DOM snapshots, per-cell RGB copies, object URLs, account authority, or source image blobs. The latest-workspace store is separate and keeps one browser-local source image Blob plus the current effective pattern so refresh can restore the current workspace. Uploading a new image overwrites that single latest-workspace record.
 
 ## Contracts
 
@@ -106,7 +108,9 @@ The local pattern persistence module is also independent of pattern generation. 
 - Supported locales are `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
 - Supported theme ids are `classic`, `midnight`, `ocean`, `candy`, and `mono`.
 - Supported interface style ids are `modern`, `pixel`, `glass-desk`, and `arcade-cabinet`.
+- Generation preferences use the `fundbeads.patternPreferences` `localStorage` key and must normalize every field before use.
 - Local pattern records use the `fundbeads-pattern-store` IndexedDB name and versioned compact records.
+- The latest workspace uses the `fundbeads-last-workspace` IndexedDB name and fixed `last-workspace` record id.
 - Persisted pattern records carry `width`, `height`, `paletteSlug`, `paletteVersion`, row-major `cellCodes`, `usage`, `totalBeads`, and `usedColorCount`.
 - Persisted `cellCodes` may contain a MARD code or `null` for an edited no-bead cell.
 - Persisted `totalBeads` equals the number of non-null `cellCodes`, not necessarily `width * height`.
@@ -118,7 +122,7 @@ The local pattern persistence module is also independent of pattern generation. 
 - Themes, interface styles, translations, and palette data are bundled static source data.
 - The app must not add a backend, server-side database, image upload service, or remote image processor without an explicit product decision.
 - IndexedDB is browser-local UX/cache infrastructure. It is not account authority and does not imply server sync.
-- Source image blobs are not automatically stored. Any future source image persistence must be explicit and bounded.
+- Source image blobs are stored only in the single latest-workspace IndexedDB record for refresh recovery. They are not uploaded, synchronized, or added to multi-item history.
 - The app must not load remote translations, remote themes, telemetry, or CDN UI assets without an explicit product decision.
 - MARD 221 is the active built-in palette slug.
 - Browser-local PNG and PDF export are current runtime surfaces rendered from the effective pattern and preview toggles.

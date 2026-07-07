@@ -25,7 +25,7 @@ Open the Vite URL shown in the terminal. By default it is:
 http://localhost:5173
 ```
 
-Upload a JPG, PNG, or WebP, choose a longest-edge preset such as `52`, `64`, or `78`, or adjust the longest edge from `40` to `100`; the app will preserve the image ratio and generate the pattern locally in the browser. The derived shorter side may be below `40` for wide or tall images, but it is never below `1`.
+Upload a JPG, PNG, or WebP up to `10MB`, choose a longest-edge preset such as `52`, `64`, or `78`, or adjust the longest edge from `40` to `100`; the app will preserve the image ratio and generate the pattern locally in the browser. The derived shorter side may be below `40` for wide or tall images, but it is never below `1`.
 
 ## What Fundbeads Does
 
@@ -33,7 +33,7 @@ Fundbeads converts an uploaded image into a bead-placement chart. Each generated
 
 The current app includes:
 
-- Local JPG/PNG/WebP upload.
+- Local JPG/PNG/WebP upload with a `10MB` file-size limit.
 - Longest-edge presets: `52`, `64`, and `78`, with an adjustable longest edge from `40` to `100`.
 - Aspect-ratio preserving output dimensions, such as `64x36` for a `16:9` image with longest edge `64`.
 - Browser-local image decoding and canvas sampling.
@@ -47,6 +47,7 @@ The current app includes:
 - Default fit-to-screen pattern viewing with zoom in/out controls.
 - Ctrl + mouse wheel, or Command + mouse wheel on macOS, to zoom while the pointer is over the pattern grid.
 - Post-generation grid editing with paint, pick, erase to no-bead empty cells, replace color, undo, redo, and reset controls.
+- Refresh recovery for the latest browser-local workspace, including the source image Blob, generated base pattern, manual edit overrides, source image size, and generation settings.
 - Browser-local PNG and PDF export from the pattern preview toolbar, using the current grid, MARD code, and row/column label visibility toggles.
 - Color usage summary with swatch, MARD code, count, percent, grid size, color count, and total bead count.
 - UI language selector for `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
@@ -57,7 +58,9 @@ The current app includes:
 
 Uploaded images are processed in the browser. The project does not include a backend, server-side database, API server, image upload endpoint, telemetry sink, or third-party image-processing service.
 
-Language, theme, and interface style preferences are stored only in browser `localStorage` when available. The app continues to run if preference storage is blocked.
+Language, theme, interface style, and generation-control preferences are stored only in browser `localStorage` when available. The app continues to run if preference storage is blocked.
+
+The latest workspace is stored as one browser-local IndexedDB record so refresh can restore the current work surface. That record keeps the source image Blob, generated base pattern, no-bead/color overrides, source image size, and generation settings. Restored source images must still match the JPG/PNG/WebP allowlist and the `10MB` limit.
 
 The Docker image serves static files only.
 

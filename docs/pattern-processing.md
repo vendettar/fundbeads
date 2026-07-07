@@ -120,8 +120,17 @@ Manual editing happens after image generation and stays in browser session state
 - Pick copies a cell's effective color code into the active paint color without changing the pattern; picking a no-bead cell is a no-op.
 - Erase sets one or more cells to no-bead (`PatternCell.color = null`).
 - Replace changes all effective cells of one MARD code to another valid MARD code.
+- Replace is a transient panel action: opening the replace picker temporarily shows Replace as the active toolbar button, but closing the picker restores the tool that was active before Replace was opened.
 - Undo, redo, and reset operate on edit transactions. A paint or erase drag stroke is one transaction.
+- During a paint or erase drag stroke, the grid may render an immediate stroke preview before pointer release. The preview affects only the grid surface; usage counts, summaries, exports, persistence, and undo/redo history are updated only when the pointer is released and the stroke commits as one transaction.
 - A new upload or reprocessing run creates a new base pattern and clears prior manual edit history.
+- Clicking a color in Color Details pins that MARD code as a grid filter. The pin remains active across paint, erase, pick, replace, undo, redo, and reset operations until the user clicks the same Color Details row again, or until a new upload/reprocessing run replaces the base pattern.
+- While a color pin is active, hidden cells are not editable. Paint, erase, pick, drag strokes, and keyboard edits only affect cells whose current effective color matches the pinned MARD code. Empty no-bead cells and cells with other MARD codes are visually hidden and treated as no-op edit targets.
+- While a color pin is active, Replace source choices are limited to the pinned MARD code. This keeps Replace from changing hidden non-pinned colors.
+- If a visible pinned-color cell is erased while the pin is active, the cell receives a neutral edited-away marker so the user can see where the removal happened even though the no-bead result is hidden by the pin filter.
+- If a visible pinned-color cell is painted to another MARD code while the pin is active, the cell is filled with a marker showing the target MARD code on the target MARD color. For example, pinning `A` and painting a visible `A` cell to `B` hides the cell under the `A` filter but leaves a full-cell `B` code marker until the pin is cleared.
+- Replace is a whole-color operation, not a single-cell paint gesture. Replacing all `A` with `B` must not create edited-away markers by itself.
+- Edited-away markers are only pinned-grid affordances and disappear when the color pin is cleared.
 
 No-bead cells render as empty cells, are excluded from usage counts, and do not display a MARD code.
 
