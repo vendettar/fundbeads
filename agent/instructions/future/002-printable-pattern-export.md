@@ -6,13 +6,13 @@ Backlog. Not approved for implementation until selected.
 
 ## Goal
 
-Add a client-side printable export for generated bead patterns while preserving local-only image handling and exact pattern/count contracts.
+Add paginated printable output for generated bead patterns while preserving local-only image handling and exact pattern/count contracts. Single-page browser-local PNG and PDF export already exists; this instruction is only for booklet-style print layouts, metadata panels, summary pages, or richer printable formats.
 
 ## Scope
 
-- Export format decision: browser print view, PDF-like print stylesheet, PNG/SVG download, or a combination.
+- Export format decision: browser print view, paginated PDF/booklet, structured HTML print CSS, SVG, or a combination.
 - Pattern export data contract for `Pattern`, `PatternCell`, and `ColorUsage`.
-- Printable layout for grid axes, bead codes, counting lines, and summary.
+- Printable layout for grid axes, bead codes, counting lines, pagination, metadata, and color summary.
 - Browser-only generation with no upload or server processing.
 
 ## Required Decisions
@@ -21,11 +21,11 @@ Add a client-side printable export for generated bead patterns while preserving 
 - Whether exported files include original filename, timestamp, palette version, or output-dimension metadata.
 - Pagination strategy for large aspect-ratio patterns, including current presets and custom longest-edge values.
 - Color and code readability requirements in print.
-- Whether export is generated from DOM, canvas, SVG, or structured HTML print CSS.
+- Whether printable output reuses current canvas export geometry, DOM preview geometry, SVG, or structured HTML print CSS.
 
 ## Acceptance Criteria
 
-- Exported pattern preserves 1-based axes on all four sides.
+- Paginated output preserves 1-based axes on all four sides.
 - Exported cells show bead color and MARD code.
 - Every 5th or 10th counting line remains visible.
 - Summary includes swatch, MARD code, label, count, output dimensions, used colors, and total beads.

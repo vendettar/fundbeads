@@ -1,32 +1,26 @@
-# [COMPLETED] 012 Remove Header Title
-
-## Completion
-
-- **Completed by**: Worker
-- **Reviewed by**: Reviewer
-- **Commands**: `pnpm check`
-- **Date**: 2026-07-06
+# 012 Header Title Contract
 
 ## Goal
 
-Remove the main app title header ("图片转拼豆图纸" / "Image to Perler Bead Pattern") from the top-left corner of the page and clean up its key from the localization dictionary across all supported languages.
+Keep the app header compact by omitting the main marketing-style title from the top-left control area. The product identity remains available through the app name and browser document title.
 
-## Current State
+## Source Contract
 
-- `frontend/src/App.tsx` renders `<h1>{t("title")}</h1>` in the top-left section of the header.
-- `frontend/src/i18n.tsx` defines the `title` key in the `Messages` type and translates it across `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, and `es`.
+- `frontend/src/App.tsx` does not render a header `<h1>` using a localized `title` key.
+- Runtime localization data does not define an unused header `title` message.
+- The browser page `<title>` in `index.html` remains unchanged.
 
 ## Scope
 
-- Remove the `<h1>` element rendering the title in `App.tsx`.
-- Remove the `title` key definition and all translations from `i18n.tsx`.
-- Verify the layout remains clean and tests pass.
+- Keep the top-left header visually compact.
+- Keep spacing balanced after omitting the large title.
+- Preserve other translations and UI elements.
 
-## Required Changes
+## Required Source Shape
 
-- Delete the line `<h1 className="mt-1 text-2xl font-semibold sm:text-3xl">{t("title")}</h1>` from `frontend/src/App.tsx`.
-- Clean up margins or classes if needed to keep spacing balanced (e.g. adjust `mt-1` on the subtitle if it is now below the app name).
-- Delete the `title: string;` declaration and all its translations from `frontend/src/i18n.tsx`.
+- No `<h1>{t("title")}</h1>` header rendering path exists in `frontend/src/App.tsx`.
+- No `title` message key exists solely for that removed header.
+- Header spacing uses current layout tokens and does not depend on the omitted title.
 
 ## Forbidden
 
@@ -39,5 +33,5 @@ Remove the main app title header ("图片转拼豆图纸" / "Image to Perler Bea
 
 ## Done When
 
-- The title `<h1>` is removed from the header.
-- The `title` key is fully cleaned up from the i18n definition and all translation blocks.
+- The header renders without the large title.
+- The i18n definition and translation blocks contain no unused header-title key.

@@ -1,4 +1,4 @@
-# 008 Aspect Ratio Auto Dimensions [COMPLETED]
+# 008 Aspect Ratio Auto Dimensions
 
 ## Goal
 
@@ -30,7 +30,7 @@ Use the Fundbeads role prompts before implementation. If subagents are available
 - `agent/role-prompt/qa-role.md`: define tests for aspect-ratio dimension calculation, image cases, and regressions.
 - `agent/role-prompt/security-role.md`: verify the feature remains browser-local with no upload, telemetry, remote image processing, or new dependency.
 - `agent/role-prompt/documentation-steward-role.md`: update steady-state docs after implementation.
-- `agent/role-prompt/reviewer-role.md`: final implementation review before completion.
+- `agent/role-prompt/reviewer-role.md`: final implementation review against this instruction.
 
 ## Read Order
 
@@ -133,7 +133,7 @@ Recommended labels:
 - Store `longestEdge` in `App.tsx` state.
 - Store the decoded/source image size when an image is uploaded, or preserve enough metadata to derive dimensions before reprocessing.
 - Derive `patternDimensions` from source image size plus `longestEdge` after upload.
-- Preserve active file reference and stale async-result guard.
+- Preserve active file reference and outdated async-result guard.
 - Reprocess when longest edge changes with `{ refreshPreview: false }`.
 - Debounce/coalesce slider changes as in the current dimension controls.
 - Do not store longest edge or source image size in localStorage in this instruction.
@@ -222,17 +222,13 @@ rg -n "fetch\\s*\\(|XMLHttpRequest|sendBeacon|https?://|telemetry|cdn" frontend/
 - Tests cover aspect-ratio dimension calculation and totals.
 - Current-state docs describe the shipped behavior.
 
-## Completion
+## Verification
 
-- Completed by: Codex Worker
-- Reviewed by: Codex Reviewer
-- Date: 2026-07-06
-- Commands:
-  - `pnpm --dir frontend test:run test/pattern.test.ts test/i18n-theme.test.ts`
-  - `pnpm test:frontend`
-  - `pnpm build:frontend`
-  - `pnpm check`
-  - `pnpm design:generate`
-  - `git diff --check`
-  - `rg -n "fetch\\s*\\(|XMLHttpRequest|sendBeacon|https?://|telemetry|cdn" frontend/src frontend/test`
-  - Focused legacy dimension-contract negative search over `README.md`, `FEATURES.md`, `FEATURES_ZH.md`, `docs`, `frontend/src`, `frontend/test`, and this instruction.
+- `pnpm --dir frontend test:run test/pattern.test.ts test/i18n-theme.test.ts`
+- `pnpm test:frontend`
+- `pnpm build:frontend`
+- `pnpm check`
+- `pnpm design:generate`
+- `git diff --check`
+- `rg -n "fetch\\s*\\(|XMLHttpRequest|sendBeacon|https?://|telemetry|cdn" frontend/src frontend/test`
+- Focused dimension-contract negative search over `README.md`, `FEATURES.md`, `FEATURES_ZH.md`, `docs`, `frontend/src`, `frontend/test`, and this instruction.

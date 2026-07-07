@@ -64,12 +64,23 @@ The Docker image serves static files only.
 ## Project Layout
 
 - `frontend/`: Vite React application.
-- `frontend/src/pattern.ts`: Image sampling, color matching, pattern contracts, and count summaries.
+- `frontend/src/App.tsx`: Single-page orchestration and processing/edit state wiring.
+- `frontend/src/upload-workspace.tsx`: Upload/dropzone workspace.
+- `frontend/src/pattern.ts`: Public pattern facade.
+- `frontend/src/pattern-model.ts`: Pattern contracts, readable cell text, and count summaries.
+- `frontend/src/pattern-processing.ts`: Source pixels to pattern conversion.
+- `frontend/src/image-file-to-pattern.browser.ts`: Browser-local worker orchestration with main-thread fallback.
+- `frontend/src/pattern-grid.tsx`: Grid orchestration, zoom, edit toolbar wiring, preview toggles, and export actions.
+- `frontend/src/pattern-grid-board.tsx`: Memoized DOM grid board, axes, cells, and keyboard grid semantics.
+- `frontend/src/pattern-grid-geometry.ts`: Shared grid geometry and guide helpers.
+- `frontend/src/pattern-render-model.ts`: Shared row/cell/axis/grid-line render model for preview and export.
 - `frontend/src/pattern-edit.ts`: Browser-session pattern editing, effective pattern reconstruction, and edit history.
 - `frontend/src/pattern-export.ts`: Browser-local PNG and PDF pattern export rendering.
+- `frontend/src/color-usage-detail.tsx`: Detailed color usage list and clipboard actions.
 - `frontend/src/palette.ts`: Stable exports for the active MARD palette contract.
 - `frontend/src/palettes/mard.ts`: Built-in static MARD 221 palette data.
-- `frontend/src/i18n.tsx`: Supported locales, translations, optional palette label overrides, and i18n provider.
+- `frontend/src/i18n.tsx`: I18n provider and translation helpers.
+- `frontend/src/i18n-data.ts`: Supported locales, translations, labels, and optional palette label overrides.
 - `frontend/src/themes.tsx`: Supported theme ids, preference handling, and theme provider.
 - `frontend/src/interface-style.tsx`: Supported interface style ids, preference handling, and interface style provider.
 - `frontend/src/browser-storage.ts`: Safe optional access to browser preference storage.

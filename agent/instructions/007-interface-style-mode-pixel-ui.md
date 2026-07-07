@@ -1,4 +1,4 @@
-# 007 Interface Style Mode and Pixel UI [COMPLETED]
+# 007 Interface Style Mode and Pixel UI
 
 ## Goal
 
@@ -17,7 +17,7 @@ Use the Fundbeads role prompts before implementation. If the runtime supports su
 - `agent/role-prompt/security-role.md`: verify no image upload, telemetry, remote font, remote CSS, or remote theme loading is introduced.
 - `agent/role-prompt/performance-role.md`: verify the pixel style does not add expensive render work to large grid paths.
 - `agent/role-prompt/qa-role.md`: define and run focused checks for style selection, i18n parity, storage fallback, and build safety.
-- `agent/role-prompt/reviewer-role.md`: final review before marking this instruction complete.
+- `agent/role-prompt/reviewer-role.md`: final review against this instruction.
 
 ## Subagent Execution Protocol
 
@@ -32,7 +32,7 @@ When subagents are available, dispatch the work in this order:
 5. **QA / Test Engineer**: specify exact tests and verification commands for the new interface style contract. Output required test additions.
 6. **Worker**: implement only after the above plan checks are clear. Use TDD: add failing tests first, verify red, implement, verify green.
 7. **Reviewer**: perform final implementation review against this instruction, docs, tests, local-only guarantees, and changed files.
-8. **Top**: resolve conflicts and decide whether the instruction can be marked complete.
+8. **Top**: resolve conflicts and decide whether the instruction contract is satisfied.
 
 Do not dispatch multiple implementation workers against overlapping frontend files. The default implementation write set is intentionally small and overlapping: `frontend/src/App.tsx`, `frontend/src/main.tsx`, `frontend/src/i18n.tsx`, `frontend/src/styles.css`, `frontend/src/browser-storage.ts`, `frontend/test/i18n-theme.test.ts`, and the new interface style module.
 
@@ -62,7 +62,7 @@ Do not dispatch multiple implementation workers against overlapping frontend fil
 - Runtime preferences use browser `localStorage` only when available.
 - `DESIGN.md` owns generated default design tokens. Do not hand-edit `frontend/src/design-theme.generated.css`.
 - The product already uses a dense tool-first layout with upload, resolution, language, theme, preview/workspace, grid, and palette or summary sections.
-- The app currently includes drag/drop upload, original image preview, active-file reuse for resolution changes, stale async-result guards, and a MARD 221 palette showcase before image upload. Preserve these behaviors.
+- The app currently includes drag/drop upload, original image preview, active-file reuse for resolution changes, outdated async-result guards, and a MARD 221 palette showcase before image upload. Preserve these behaviors.
 - The active palette is the built-in static `mard-221` dataset. Do not reintroduce mock-palette language or source URLs.
 - Current tests include source-level guards for upload workflow behavior, client-only networking, i18n parity, MARD palette contracts, and theme storage fallback.
 
@@ -328,18 +328,12 @@ If one command fails, fix the issue and rerun the relevant command. If the same 
 - Required verification commands pass or documented blockers are reported.
 - Docs and feature lists are aligned with the shipped behavior if user-visible documentation is updated.
 
-## Completion
+## Verification
 
-- Completed by: Codex Worker
-- Reviewed by: Fundbeads Reviewer subagent, PASS
-- Date: 2026-07-06
-- Commands:
-  - `pnpm --dir frontend test:run test/i18n-theme.test.ts`
-  - `pnpm test:frontend`
-  - `pnpm --dir frontend build`
-  - `pnpm design:generate`
-  - `pnpm check`
-  - `git diff --check`
-- Notes:
-  - E2E/browser verification skipped by user request on 2026-07-06.
-  - Pixel UI implementation remains scoped to interface presentation and does not alter pattern data, MARD 221 data, output-dimension support, palette matching, or local-only processing boundaries.
+- `pnpm --dir frontend test:run test/i18n-theme.test.ts`
+- `pnpm test:frontend`
+- `pnpm --dir frontend build`
+- `pnpm design:generate`
+- `pnpm check`
+- `git diff --check`
+- Pixel UI remains scoped to interface presentation and does not alter pattern data, MARD 221 data, output-dimension support, palette matching, or local-only processing boundaries.

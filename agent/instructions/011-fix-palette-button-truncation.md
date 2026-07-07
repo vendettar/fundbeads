@@ -1,37 +1,27 @@
-# [COMPLETED] 011 Fix Palette Button Truncation
-
-## Completion
-
-- **Completed by**: Worker
-- **Reviewed by**: Reviewer
-- **Commands**: `pnpm check`
-- **Date**: 2026-07-06
+# 011 Toolbar Responsive Layout
 
 ## Goal
 
-Fix layout truncation issues on the top toolbar:
-1. The left area of the "MARD 221" palette button (specifically, the Palette icon and the left side of the button container) is cut off by the left header/banner when the header elements overflow the screen width under restricted viewports.
-2. The right area of the rightmost button ("Interface Style" select dropdown) is cut off under the desktop layout width (1216px content width at `xl` breakpoint) because the toolbar container is allowed to shrink, forcing an overflow when side-by-side with the long title/subtitle.
+Maintain a responsive top toolbar where the palette button, language selector, theme selector, and interface style selector remain reachable at narrow and desktop viewport widths.
 
-## Current State
+## Layout Contract
 
-- The buttons and preferences container in `frontend/src/App.tsx` has class names:
-  `no-scrollbar flex max-w-full items-center gap-2 overflow-x-auto p-1 mx-[-4px]` (after removing `xl:justify-end`).
-- Under the `xl` breakpoint (viewport >= 1280px, layout is `xl:flex-row`), the outer flex container places the title section and the toolbar side-by-side.
-- The toolbar wrapper `div` has classes `min-w-0 xl:ml-auto`, which allows it to shrink below its natural width. When the subtitle and toolbar widths combined exceed 1216px, the toolbar shrinks, triggering overflow scrolling and clipping the rightmost select button.
+- Header contents use a single-column layout on narrow viewports and a two-column grid at `xl`.
+- Desktop grid columns allocate remaining space to copy and exact content width to the toolbar.
+- The toolbar can scroll horizontally on narrow viewports without clipping the first or last control.
+- Interactive controls keep visible focus states and remain keyboard reachable.
 
 ## Scope
 
-- Adjust the layout of the header container in `frontend/src/App.tsx` to prevent flexbox from shrinking the interactive toolbar.
-- Use a CSS Grid layout for the header contents under desktop viewports to allocate remaining space to the text title section (`1fr`) and exact content width to the toolbar (`auto`).
-- Ensure that the buttons are aligned properly under both desktop and mobile viewports.
+- Keep the top control area in `frontend/src/App.tsx` aligned under both desktop and mobile viewports.
+- Keep the toolbar's overflow behavior horizontal and intentional.
+- Preserve existing dropdown, input, selector, i18n, theme, and interface style behavior.
 
-## Required Changes
+## Required Source Shape
 
-- In `frontend/src/App.tsx`, change the outer flex container class:
-  From: `flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between`
-  To: `grid grid-cols-1 gap-4 xl:grid-cols-[1fr_auto] xl:items-center`
-- Keep the `xl:justify-end` class removed from the inner flex container to maintain correct scroll behavior on mobile overflow.
+- Header wrapper uses `grid grid-cols-1 gap-4 xl:grid-cols-[1fr_auto] xl:items-center`.
+- Toolbar scroller uses `no-scrollbar flex max-w-full items-center gap-2 overflow-x-auto p-1 mx-[-4px]`.
+- Toolbar scroller does not rely on `xl:justify-end` for alignment.
 
 ## Forbidden
 
@@ -46,5 +36,5 @@ Fix layout truncation issues on the top toolbar:
 
 ## Done When
 
-- The leftmost button "MARD 221" is fully visible or can be scrolled to without truncation on narrow screens.
-- The rightmost button ("Interface Style") is fully visible and not truncated at any screen width, including the 1280px viewport (`1216px` content width).
+- The "MARD 221" palette button is fully visible or can be scrolled to without truncation on narrow screens.
+- The "Interface Style" selector is fully visible and not truncated at desktop widths, including a 1280px viewport.

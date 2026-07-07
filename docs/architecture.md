@@ -32,17 +32,34 @@ There is no backend service. The production Docker image serves static files wit
 
 ## Source-of-Truth Map
 
-- `frontend/src/App.tsx`: Single-page workflow, upload controls, longest-edge pattern controls, effective grid rendering, manual edit toolbar, and summary rendering.
-- `frontend/src/i18n.tsx`: Locale allowlist, static translation dictionaries, interface style labels, optional palette label overrides, and i18n provider.
+- `frontend/src/App.tsx`: Single-page orchestration, preference selectors, generation controls, processing hook wiring, and effective pattern state.
+- `frontend/src/upload-workspace.tsx`: Upload/dropzone workspace and processing busy surface.
+- `frontend/src/pattern-grid.tsx`: Pattern grid orchestration, zoom, preview toggles, export actions, and edit toolbar wiring.
+- `frontend/src/pattern-grid-board.tsx`: Memoized DOM grid board, axes, cells, and keyboard grid semantics.
+- `frontend/src/pattern-grid-geometry.ts`: Shared grid axes, guide, preview option, and geometry helpers.
+- `frontend/src/pattern-render-model.ts`: Shared row, cell, axis, and grid-line render model consumed by DOM preview and canvas export.
+- `frontend/src/pattern-export.ts`: Browser-local PNG and PDF rendering from the effective pattern and preview options.
+- `frontend/src/color-usage-detail.tsx`: Detailed color usage list, hover/pinned preview focus, and clipboard actions.
+- `frontend/src/pattern-side-rail.tsx`: Original preview, compact stats, and color usage rail.
+- `frontend/src/i18n.tsx`: I18n provider, locale resolution, translation helpers, and label lookup functions.
+- `frontend/src/i18n-data.ts`: Locale allowlist, static translation dictionaries, interface style labels, theme labels, and optional palette label overrides.
 - `frontend/src/themes.tsx`: Theme allowlist, static theme ids, and theme preference provider.
 - `frontend/src/interface-style.tsx`: Interface style allowlist, static style ids, and interface style preference provider.
 - `frontend/src/browser-storage.ts`: Safe optional access to browser `localStorage`.
 - `frontend/src/local-pattern-db.ts`: Browser-local IndexedDB infrastructure for compact, validated pattern records.
-- `frontend/src/pattern.ts`: `PatternDimensions`, aspect-ratio dimension derivation, `Pattern`, `PatternCell`, `ColorUsage`, image sampling, local color-distance matching, dithering, readable text color, and count summaries.
+- `frontend/src/pattern.ts`: Public facade for pattern dimensions, model, color matching, dithering, image processing, max-color, and readable text helpers.
+- `frontend/src/pattern-model.ts`: `Pattern`, `PatternCell`, `ColorUsage`, readable text color, cell conversion, and count summaries.
+- `frontend/src/pattern-processing.ts`: Source pixels to pattern conversion, dither application, max-color limiting, and usage aggregation.
+- `frontend/src/image-file-to-pattern.browser.ts`: Browser-local worker orchestration with main-thread fallback.
+- `frontend/src/image-file-to-pattern.worker.ts`: Module worker image processing path.
 - `frontend/src/pattern-edit.ts`: Browser-session manual editing state, MARD-code overrides, effective pattern reconstruction, replace, reset, undo, and redo.
 - `frontend/src/palette.ts`: Stable exports for the active MARD palette contract.
 - `frontend/src/palettes/mard.ts`: Built-in static MARD 221 palette definition.
-- `frontend/src/styles.css`: Tailwind v4 semantic token mapping and named runtime theme overrides.
+- `frontend/src/styles.css`: CSS entrypoint importing Tailwind, generated theme variables, and approved global CSS partitions.
+- `frontend/src/styles/base.css`: Root theme overrides, Tailwind v4 `@theme`, resets, and base element rules.
+- `frontend/src/styles/components.css`: Named component/layout primitives used by JSX.
+- `frontend/src/styles/pattern-grid.css`: Pattern grid geometry, guide, and focus primitives.
+- `frontend/src/styles/interface-styles.css`: Scoped interface style overrides.
 - `frontend/src/design-theme.generated.css`: Generated CSS variables from `DESIGN.md`. Do not edit directly.
 - `scripts/generate-design-theme.mjs`: Design token generation script.
 - `docs/pattern-processing.md`: Pattern-processing contract.
@@ -91,7 +108,8 @@ The local pattern persistence module is also independent of pattern generation. 
 - Supported interface style ids are `modern`, `pixel`, `glass-desk`, and `arcade-cabinet`.
 - Local pattern records use the `fundbeads-pattern-store` IndexedDB name and versioned compact records.
 - Persisted pattern records carry `width`, `height`, `paletteSlug`, `paletteVersion`, row-major `cellCodes`, `usage`, `totalBeads`, and `usedColorCount`.
-- Current compact local pattern records require every stored cell to have a MARD code; no-bead edited cells are not representable by that schema yet.
+- Persisted `cellCodes` may contain a MARD code or `null` for an edited no-bead cell.
+- Persisted `totalBeads` equals the number of non-null `cellCodes`, not necessarily `width * height`.
 - Persisted pattern records must validate against the active `mard-221` palette before they are reconstructed into `Pattern`.
 
 ## Boundaries

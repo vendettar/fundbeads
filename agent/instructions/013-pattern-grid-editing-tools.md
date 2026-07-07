@@ -1,8 +1,8 @@
-# 013 Pattern Grid Editing Tools [COMPLETED]
+# 013 Pattern Grid Editing Tools
 
 ## Status
 
-Completed. This instruction defines manual editing tools for the generated pattern grid only.
+Current instruction for manual editing tools on the generated pattern grid.
 
 ## Goal
 
@@ -245,7 +245,7 @@ The final API can differ, but it must preserve the same responsibilities and tes
 - The original image preview and source image metadata must continue to represent the uploaded image, not edited pattern cells.
 - The existing pattern generation options remain the only source-image processing controls in this instruction.
 - When `imageFileToPattern` or equivalent generation completes with a new pattern, initialize a fresh edit state for that base pattern and discard the previous undo/redo stacks.
-- If generation fails, do not keep stale edits attached to a failed or absent pattern.
+- If generation fails, do not keep outdated edits attached to a failed or absent pattern.
 - If the user changes the active language, theme, or interface style, edit state should remain unchanged.
 - If the user changes active paint color or tool mode, pattern data should remain unchanged unless a paint, erase, replace, reset, undo, or redo action is applied.
 
@@ -350,7 +350,7 @@ Manual verification for the implementer:
 - Confirm the compact summary and detailed usage list update immediately.
 - Confirm zoom, scroll, and color focus highlighting still work.
 - Confirm erased cells become no-bead empty cells and total bead count decreases accordingly.
-- Change matching mode, smoothing, max color count, or longest edge and confirm the regenerated pattern starts with no stale manual edits.
+- Change matching mode, smoothing, max color count, or longest edge and confirm the regenerated pattern starts with no outdated manual edits.
 
 ## Documentation Updates
 
@@ -400,15 +400,8 @@ The second search is expected to return nothing for this instruction unless a fu
 - No backend, upload service, telemetry, remote palette source, or E2E dependency is added.
 - Focused tests and docs updates cover the edited-pattern contract.
 - Verification output lists commands run, pass/fail status, manual checks performed, negative search results, and residual risks.
-- The instruction H1 is marked `[COMPLETED]` only after implementation evidence exists, and `Reviewed by` is added only after reviewer approval.
 
-## Completion
-
-Completed by: Codex
-Reviewed by: Codex reviewer Cicero
-Date: 2026-07-06
-
-Implemented:
+## Implementation Surface
 
 - Added pure pattern editing helpers in `frontend/src/pattern-edit.ts` for base/effective pattern state, paint, erase to no-bead, replace, undo, redo, reset, override validation, and bounded history.
 - Wired the generated grid to render effective pattern state and added grid-area edit controls for view, paint, pick, erase, replace, undo, redo, reset, active color, and replace source/target swatches.
@@ -425,10 +418,6 @@ Verification:
 - `rg -n "fetch\\s*\\(|XMLHttpRequest|sendBeacon|https?://|telemetry|cdn" frontend/src frontend/test` only matched the test guard in `frontend/test/i18n-theme.test.ts`.
 - `rg -n "EMPTY_CELL|blankCanvas|floodFill|magic|wand" frontend/src frontend/test` returned no matches.
 
-Manual / E2E:
+Manual verification boundary:
 
-- Browser/E2E verification was skipped per user request: `跳过 e2e,继续`.
-
-Residual risks:
-
-- No browser interaction screenshot or manual Playwright run was performed because E2E was explicitly skipped.
+- Browser/E2E verification is outside the current requested verification scope.
