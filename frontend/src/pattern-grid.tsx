@@ -1,21 +1,31 @@
 import { ZoomIn, ZoomOut } from "lucide-react";
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent, RefObject } from "react";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { useI18n } from "./i18n";
-import { mardPalette } from "./palette";
+import { mard221Palette, mardPalette } from "./palette";
 import { PatternEditControls } from "./pattern-edit-toolbar";
 import { exportPatternPdf, exportPatternPng } from "./pattern-export";
 import { PatternGridBoard } from "./pattern-grid-board";
 import { defaultPatternPreviewOptions, patternGridGeometry, type PatternPreviewOption } from "./pattern-grid-geometry";
+import { getPatternReplaceColorGroups, getPatternReplaceSourceColors, getPatternReplaceTargetColors, getValidPatternReplaceTargetCode } from "./pattern-replace-options";
 import {
+  canPanPatternGrid,
   clampPatternGridZoom,
   collectStrokeCellIndexes,
+  nextPatternGridPanScroll,
   nextKeyboardCellIndex,
-  patternGridFocusRules,
+  patternGridCellCanEdit,
+  patternGridColorFocusEditedAwayMarkerChanges,
+  patternGridReplaceReturnTool,
+  patternGridToolAfterReplaceClose,
+  previewPatternGridStroke,
   patternGridZoomMax,
   patternGridZoomMin,
   patternGridZoomStep,
+  type PatternGridColorFocusEditedAwayMarker,
+  type PatternGridPersistentEditTool,
+  type PatternGridPanStart,
 } from "./pattern-grid-interaction";
 import { PatternPreviewToolbar, type PatternExportFormat } from "./pattern-preview-toolbar";
 import {
@@ -30,7 +40,7 @@ import {
   type PatternEditState,
   type PatternEditTool,
 } from "./pattern-edit";
-import type { Pattern } from "./pattern";
+import { readableTextColor, type Pattern } from "./pattern";
 
 const baseCellSize = 22;
 const baseAxisWidth = 38;
@@ -44,6 +54,14 @@ type PatternEditStroke = {
   cellIndexes: Set<number>;
   lastCellIndex: number;
 };
+type PatternEditStrokePreview = {
+  tool: "paint" | "erase";
+  cellIndexes: ReadonlySet<number>;
+};
+type PatternGridPan = PatternGridPanStart & {
+  pointerId: number;
+};
+type PatternGridColorFocusEditedAwayCellMarker = { type: "erase" } | { type: "paint"; colorCode: string; colorCss: string; colorFgCss: string };
 
 type PatternGridProps = {
   pattern: Pattern;
@@ -51,27 +69,37 @@ type PatternGridProps = {
   onEditStateChange: (updater: PatternEditStateUpdater) => void;
   xLabels: number[];
   gridRef: RefObject<HTMLDivElement | null>;
+  pinnedColorCode: string | null;
+  onGridDisplayOptionsChange: () => void;
 };
 
-export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gridRef }: PatternGridProps) {
+export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gridRef, pinnedColorCode, onGridDisplayOptionsChange }: PatternGridProps) {
   const { t } = useI18n();
   const viewportRef = useRef<HTMLDivElement>(null);
   const strokeRef = useRef<PatternEditStroke | null>(null);
+  const viewPanRef = useRef<PatternGridPan | null>(null);
   const keyboardCellIndexRef = useRef(0);
   const gridCellIdPrefix = useId();
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [zoom, setZoom] = useState(1);
   const [keyboardCellIndex, setKeyboardCellIndex] = useState(0);
+  const [isPanning, setIsPanning] = useState(false);
   const [isReplacePanelOpen, setIsReplacePanelOpen] = useState(false);
+  const [replaceReturnTool, setReplaceReturnTool] = useState<PatternGridPersistentEditTool>("view");
   const [replaceSourceCode, setReplaceSourceCode] = useState(editState.activeColorCode);
   const [replaceTargetCode, setReplaceTargetCode] = useState(editState.activeColorCode);
   const [replaceStatusKey, setReplaceStatusKey] = useState<"patternEditReplaceNoSource" | null>(null);
   const [previewOptions, setPreviewOptions] = useState(defaultPatternPreviewOptions);
   const [exportFormat, setExportFormat] = useState<PatternExportFormat | null>(null);
   const [exportFailed, setExportFailed] = useState(false);
-  const usageColorCodes = useMemo(() => pattern.usage.map(({ color }) => color.code), [pattern.usage]);
-  const focusRules = useMemo(() => patternGridFocusRules(usageColorCodes), [usageColorCodes]);
-  const sourceColorCodes = useMemo(() => new Set(usageColorCodes), [usageColorCodes]);
+  const [strokePreview, setStrokePreview] = useState<PatternEditStrokePreview | null>(null);
+  const [colorFocusEditedAwayCellMarkers, setColorFocusEditedAwayCellMarkers] = useState<ReadonlyMap<number, PatternGridColorFocusEditedAwayCellMarker>>(new Map());
+  const replaceSourceColors = useMemo(() => getPatternReplaceSourceColors(pattern.usage, pinnedColorCode), [pattern.usage, pinnedColorCode]);
+  const validReplaceSourceCodes = useMemo(() => new Set(replaceSourceColors.map((color) => color.code)), [replaceSourceColors]);
+  const selectedReplaceSourceCode = validReplaceSourceCodes.has(replaceSourceCode) ? replaceSourceCode : (replaceSourceColors[0]?.code ?? "");
+  const replaceTargetColors = useMemo(() => getPatternReplaceTargetColors(mardPalette, selectedReplaceSourceCode), [selectedReplaceSourceCode]);
+  const replaceSourceColorGroups = useMemo(() => getPatternReplaceColorGroups(replaceSourceColors, mard221Palette.groups), [replaceSourceColors]);
+  const replaceTargetColorGroups = useMemo(() => getPatternReplaceColorGroups(replaceTargetColors, mard221Palette.groups), [replaceTargetColors]);
   const geometry = useMemo(
     () =>
       patternGridGeometry(pattern, {
@@ -92,12 +120,16 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
   const scaledHeight = baseHeight * effectiveScale;
   const zoomLabel = `${Math.round(zoom * 100)}%`;
   const activeColor = mardPaletteByCode.get(editState.activeColorCode) ?? mardPalette[0];
-  const replaceSourceColor = pattern.usage.find(({ color }) => color.code === replaceSourceCode)?.color;
+  const replaceSourceColor = replaceSourceColors.find((color) => color.code === selectedReplaceSourceCode);
   const replaceTargetColor = mardPaletteByCode.get(replaceTargetCode);
+  const strokePreviewPattern = useMemo(
+    () => (strokePreview ? previewPatternGridStroke(pattern, [...strokePreview.cellIndexes], strokePreview.tool, activeColor) : pattern),
+    [activeColor, pattern, strokePreview],
+  );
   const canUndo = editState.undoStack.length > 0;
   const canRedo = editState.redoStack.length > 0;
   const hasManualEdits = Object.keys(editState.overrides).length > 0;
-  const canApplyReplace = replaceSourceCode !== replaceTargetCode && sourceColorCodes.has(replaceSourceCode);
+  const canApplyReplace = validReplaceSourceCodes.has(selectedReplaceSourceCode) && replaceTargetColors.some((color) => color.code === replaceTargetCode);
   const activeGridCellId = `${gridCellIdPrefix}-cell-${keyboardCellIndex}`;
 
   const setKeyboardFocusedCell = useCallback(
@@ -170,6 +202,7 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
   useEffect(() => {
     return () => {
       strokeRef.current = null;
+      viewPanRef.current = null;
     };
   }, []);
 
@@ -217,42 +250,76 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
   }, []);
 
   useEffect(() => {
-    const defaultSourceCode = sourceColorCodes.has(editState.activeColorCode) ? editState.activeColorCode : pattern.usage[0]?.color.code;
-    if (defaultSourceCode && !sourceColorCodes.has(replaceSourceCode)) {
-      setReplaceSourceCode(defaultSourceCode);
+    const defaultSourceCode = validReplaceSourceCodes.has(editState.activeColorCode) ? editState.activeColorCode : replaceSourceColors[0]?.code;
+    setReplaceSourceCode((currentSourceCode) => (validReplaceSourceCodes.has(currentSourceCode) ? currentSourceCode : (defaultSourceCode ?? "")));
+  }, [editState.activeColorCode, replaceSourceColors, validReplaceSourceCodes]);
+
+  useEffect(() => {
+    setReplaceTargetCode((currentTargetCode) => getValidPatternReplaceTargetCode(mardPalette, selectedReplaceSourceCode, currentTargetCode));
+  }, [selectedReplaceSourceCode]);
+
+  useLayoutEffect(() => {
+    onGridDisplayOptionsChange();
+  }, [onGridDisplayOptionsChange, previewOptions.showAxes, previewOptions.showCodes, previewOptions.showGrid]);
+
+  useEffect(() => {
+    setColorFocusEditedAwayCellMarkers(new Map());
+  }, [pinnedColorCode]);
+
+  useEffect(() => {
+    if (!pinnedColorCode) {
+      return;
     }
-    if (!mardPaletteByCode.has(replaceTargetCode)) {
-      setReplaceTargetCode(editState.activeColorCode);
-    }
-  }, [editState.activeColorCode, pattern.usage, replaceSourceCode, replaceTargetCode, sourceColorCodes]);
+
+    setColorFocusEditedAwayCellMarkers((currentMarkers) => {
+      const nextMarkers = new Map([...currentMarkers].filter(([cellIndex]) => pattern.cells[cellIndex]?.color?.code !== pinnedColorCode));
+      return nextMarkers.size === currentMarkers.size ? currentMarkers : nextMarkers;
+    });
+  }, [pattern, pinnedColorCode]);
+
+  function closeReplacePanel() {
+    setIsReplacePanelOpen(false);
+    updateEditState((currentState) => setPatternEditTool(currentState, patternGridToolAfterReplaceClose(currentState.tool, replaceReturnTool)));
+  }
 
   function switchTool(tool: PatternEditTool) {
-    updateEditState((currentState) => setPatternEditTool(currentState, tool));
     if (tool === "replace") {
+      if (isReplacePanelOpen) {
+        closeReplacePanel();
+        return;
+      }
+
+      const nextReturnTool = patternGridReplaceReturnTool(editState.tool, replaceReturnTool);
+      setReplaceReturnTool(nextReturnTool);
+      updateEditState((currentState) => setPatternEditTool(currentState, "replace"));
       setIsReplacePanelOpen(true);
+      return;
     }
+    updateEditState((currentState) => setPatternEditTool(currentState, tool));
+    setIsReplacePanelOpen(false);
   }
 
   function selectActiveColor(colorCode: string) {
     updateEditState((currentState) => setPatternEditActiveColor(setPatternEditTool(currentState, "paint"), colorCode, mardPalette));
+    setIsReplacePanelOpen(false);
     setReplaceTargetCode(colorCode);
-    if (sourceColorCodes.has(colorCode)) {
+    if (validReplaceSourceCodes.has(colorCode)) {
       setReplaceSourceCode(colorCode);
     }
   }
 
   function applyReplace() {
-    if (!canApplyReplace) {
+    if (!canApplyReplace || !validReplaceSourceCodes.has(selectedReplaceSourceCode)) {
       setReplaceStatusKey("patternEditReplaceNoSource");
       return;
     }
 
-    updateEditState((currentState) => replacePatternColor(currentState, replaceSourceCode, replaceTargetCode, mardPalette));
+    updateEditState((currentState) => replacePatternColor(currentState, selectedReplaceSourceCode, replaceTargetCode, mardPalette));
     setReplaceStatusKey(null);
   }
 
   function applyKeyboardCellEdit(cellIndex: number) {
-    if (editState.tool === "view" || editState.tool === "replace") {
+    if (editState.tool === "view" || editState.tool === "replace" || !canEditCellIndex(cellIndex)) {
       return;
     }
 
@@ -260,12 +327,14 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
       const pickedColorCode = pattern.cells[cellIndex]?.color?.code;
       if (pickedColorCode) {
         updateEditState((currentState) => setPatternEditTool(setPatternEditActiveColor(currentState, pickedColorCode, mardPalette), "paint"));
+        setIsReplacePanelOpen(false);
         setReplaceSourceCode(pickedColorCode);
         setReplaceTargetCode(pickedColorCode);
       }
       return;
     }
 
+    markColorFocusEditedAwayCells([cellIndex], editState.tool === "paint" ? editState.activeColorCode : null);
     updateEditState((currentState) =>
       editState.tool === "paint"
         ? paintPatternCells(currentState, [cellIndex], currentState.activeColorCode, mardPalette)
@@ -293,17 +362,113 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
     return getCellIndexFromTarget(document.elementFromPoint(event.clientX, event.clientY));
   }
 
+  function canEditCellIndex(cellIndex: number) {
+    return patternGridCellCanEdit(pattern.cells[cellIndex]?.color?.code, pinnedColorCode);
+  }
+
+  function markColorFocusEditedAwayCells(cellIndexes: number[], nextColorCode: string | null) {
+    const markerChanges = patternGridColorFocusEditedAwayMarkerChanges(
+      cellIndexes.map((cellIndex) => ({ cellIndex, colorCode: pattern.cells[cellIndex]?.color?.code })),
+      pinnedColorCode,
+      nextColorCode,
+    );
+
+    if (markerChanges.addMarkers.length === 0 && markerChanges.removeIndexes.length === 0) {
+      return;
+    }
+
+    setColorFocusEditedAwayCellMarkers((currentMarkers) => {
+      const nextMarkers = new Map(currentMarkers);
+      markerChanges.removeIndexes.forEach((cellIndex) => nextMarkers.delete(cellIndex));
+      markerChanges.addMarkers.forEach(({ cellIndex, marker }) => {
+        const displayMarker = getColorFocusEditedAwayDisplayMarker(marker);
+        if (displayMarker) {
+          nextMarkers.set(cellIndex, displayMarker);
+        } else {
+          nextMarkers.delete(cellIndex);
+        }
+      });
+      return nextMarkers;
+    });
+  }
+
+  function getColorFocusEditedAwayDisplayMarker(marker: PatternGridColorFocusEditedAwayMarker): PatternGridColorFocusEditedAwayCellMarker | null {
+    if (marker.type === "erase") {
+      return marker;
+    }
+
+    const color = mardPaletteByCode.get(marker.colorCode);
+    return color ? { ...marker, colorCss: `rgb(${color.r} ${color.g} ${color.b})`, colorFgCss: readableTextColor(color) } : null;
+  }
+
+  function getViewportPanMetrics(viewport: HTMLDivElement) {
+    return {
+      scrollWidth: viewport.scrollWidth,
+      clientWidth: viewport.clientWidth,
+      scrollHeight: viewport.scrollHeight,
+      clientHeight: viewport.clientHeight,
+    };
+  }
+
+  function beginViewPan(event: ReactPointerEvent<HTMLDivElement>) {
+    const viewport = viewportRef.current;
+    if (!viewport || !canPanPatternGrid(getViewportPanMetrics(viewport))) {
+      return false;
+    }
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    viewPanRef.current = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      scrollLeft: viewport.scrollLeft,
+      scrollTop: viewport.scrollTop,
+    };
+    setIsPanning(true);
+    return true;
+  }
+
+  function updateViewPan(event: ReactPointerEvent<HTMLDivElement>) {
+    const pan = viewPanRef.current;
+    const viewport = viewportRef.current;
+    if (!pan || pan.pointerId !== event.pointerId || !viewport) {
+      return false;
+    }
+
+    event.preventDefault();
+    const nextScroll = nextPatternGridPanScroll(pan, event, getViewportPanMetrics(viewport));
+    viewport.scrollLeft = nextScroll.scrollLeft;
+    viewport.scrollTop = nextScroll.scrollTop;
+    return true;
+  }
+
+  function clearViewPan(pointerId: number) {
+    if (viewPanRef.current?.pointerId === pointerId) {
+      viewPanRef.current = null;
+      setIsPanning(false);
+    }
+  }
+
   function addStrokeCell(event: ReactPointerEvent<HTMLElement>) {
     const stroke = strokeRef.current;
     if (!stroke || stroke.pointerId !== event.pointerId) {
       return;
     }
     const cellIndex = getCellIndexFromPointerEvent(event);
-    if (cellIndex !== null) {
+    if (cellIndex !== null && canEditCellIndex(cellIndex)) {
       const previousCellIndex = stroke.lastCellIndex;
-      const nextCellIndexes = collectStrokeCellIndexes(previousCellIndex, cellIndex, pattern.width);
-      nextCellIndexes.forEach((nextCellIndex) => stroke.cellIndexes.add(nextCellIndex));
+      const nextCellIndexes = collectStrokeCellIndexes(previousCellIndex, cellIndex, pattern.width).filter((nextCellIndex) => canEditCellIndex(nextCellIndex));
+      let addedPreviewCell = false;
+      nextCellIndexes.forEach((nextCellIndex) => {
+        if (!stroke.cellIndexes.has(nextCellIndex)) {
+          addedPreviewCell = true;
+          stroke.cellIndexes.add(nextCellIndex);
+        }
+      });
       stroke.lastCellIndex = cellIndex;
+      if (addedPreviewCell) {
+        setStrokePreview({ tool: stroke.tool, cellIndexes: new Set(stroke.cellIndexes) });
+      }
     }
   }
 
@@ -313,12 +478,14 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
       return;
     }
     strokeRef.current = null;
+    setStrokePreview(null);
 
     const cellIndexes = [...stroke.cellIndexes];
     if (cellIndexes.length === 0) {
       return;
     }
 
+    markColorFocusEditedAwayCells(cellIndexes, stroke.tool === "paint" ? editState.activeColorCode : null);
     updateEditState((currentState) =>
       stroke.tool === "paint"
         ? paintPatternCells(currentState, cellIndexes, currentState.activeColorCode, mardPalette)
@@ -329,6 +496,7 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
   function clearStroke(pointerId: number) {
     if (strokeRef.current?.pointerId === pointerId) {
       strokeRef.current = null;
+      setStrokePreview(null);
     }
   }
 
@@ -343,15 +511,29 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
       return;
     }
 
+    if (editState.tool === "view") {
+      event.preventDefault();
+      const cellIndex = getCellIndexFromPointerEvent(event);
+      if (cellIndex !== null) {
+        setKeyboardFocusedCell(cellIndex);
+      }
+      beginViewPan(event);
+      return;
+    }
+
     const cellIndex = getCellIndexFromPointerEvent(event);
     if (cellIndex === null) {
+      return;
+    }
+
+    if ((editState.tool === "paint" || editState.tool === "erase" || editState.tool === "pick") && !canEditCellIndex(cellIndex)) {
       return;
     }
 
     event.preventDefault();
     setKeyboardFocusedCell(cellIndex);
 
-    if (editState.tool === "view" || editState.tool === "replace") {
+    if (editState.tool === "replace") {
       return;
     }
 
@@ -359,6 +541,7 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
       const pickedColorCode = pattern.cells[cellIndex]?.color?.code;
       if (pickedColorCode) {
         updateEditState((currentState) => setPatternEditTool(setPatternEditActiveColor(currentState, pickedColorCode, mardPalette), "paint"));
+        setIsReplacePanelOpen(false);
         setReplaceSourceCode(pickedColorCode);
         setReplaceTargetCode(pickedColorCode);
       }
@@ -376,24 +559,33 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
       cellIndexes: new Set([cellIndex]),
       lastCellIndex: cellIndex,
     };
+    setStrokePreview({ tool: editState.tool, cellIndexes: new Set([cellIndex]) });
   }
 
   function onBoardPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (updateViewPan(event)) {
+      return;
+    }
     addStrokeCell(event);
   }
 
   function onBoardPointerUp(event: ReactPointerEvent<HTMLDivElement>) {
     commitStroke(event.pointerId);
+    clearViewPan(event.pointerId);
     releaseBoardPointerCapture(event.currentTarget, event.pointerId);
   }
 
   function onBoardPointerLeave(event: ReactPointerEvent<HTMLDivElement>) {
+    if (viewPanRef.current?.pointerId === event.pointerId) {
+      return;
+    }
     commitStroke(event.pointerId);
     releaseBoardPointerCapture(event.currentTarget, event.pointerId);
   }
 
   function onBoardPointerCancel(event: ReactPointerEvent<HTMLDivElement>) {
     clearStroke(event.pointerId);
+    clearViewPan(event.pointerId);
     releaseBoardPointerCapture(event.currentTarget, event.pointerId);
   }
 
@@ -448,11 +640,13 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
           editState={editState}
           activeColor={activeColor}
           sourceUsage={pattern.usage}
+          replaceSourceColorGroups={replaceSourceColorGroups}
+          replaceTargetColorGroups={replaceTargetColorGroups}
           canUndo={canUndo}
           canRedo={canRedo}
           hasManualEdits={hasManualEdits}
           isReplacePanelOpen={isReplacePanelOpen}
-          replaceSourceCode={replaceSourceCode}
+          replaceSourceCode={selectedReplaceSourceCode}
           replaceTargetCode={replaceTargetCode}
           replaceSourceColor={replaceSourceColor}
           replaceTargetColor={replaceTargetColor}
@@ -463,15 +657,14 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
           onUndo={() => updateEditState(undoPatternEdit)}
           onRedo={() => updateEditState(redoPatternEdit)}
           onReset={() => updateEditState(resetPatternEdits)}
-          onReplacePanelToggle={() => setIsReplacePanelOpen((isOpen) => !isOpen)}
           onReplaceSourceChange={setReplaceSourceCode}
           onReplaceTargetChange={setReplaceTargetCode}
           onApplyReplace={applyReplace}
+          onReplacePanelClose={closeReplacePanel}
         />
       </div>
-      <style className="pattern-focus-rules">{focusRules}</style>
       <PatternGridBoard
-        pattern={pattern}
+        pattern={strokePreviewPattern}
         previewOptions={previewOptions}
         xLabels={xLabels}
         gridRef={gridRef}
@@ -482,6 +675,9 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
         scaledWidth={scaledWidth}
         scaledHeight={scaledHeight}
         effectiveScale={effectiveScale}
+        editTool={editState.tool}
+        isPanning={isPanning}
+        colorFocusEditedAwayCellMarkers={colorFocusEditedAwayCellMarkers}
         onPointerDown={onBoardPointerDown}
         onPointerMove={onBoardPointerMove}
         onPointerUp={onBoardPointerUp}

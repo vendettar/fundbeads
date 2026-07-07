@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { createElement, createRef } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
+import { I18nProvider } from "../src/i18n";
 import type { BeadColor } from "../src/palette";
 import type { Pattern, PatternCell } from "../src/pattern";
-import { buildPatternGridRowModels, patternGridRowCellsRenderEqual } from "../src/pattern-grid-board";
+import { buildPatternGridRowModels, PatternGridBoard, patternGridRowCellsRenderEqual } from "../src/pattern-grid-board";
 import { patternGridGeometry } from "../src/pattern-grid-geometry";
 import type { PatternRenderRowModel } from "../src/pattern-render-model";
 
@@ -33,6 +36,42 @@ function geometryFor(pattern: Pattern) {
 
 function buildRows(pattern: Pattern, previousRows: readonly PatternRenderRowModel[] = []) {
   return buildPatternGridRowModels(pattern, geometryFor(pattern), previousRows);
+}
+
+function renderBoardWithEditedAwayPaintMarker(showCodes: boolean) {
+  const pattern = createPattern([{ x: 1, y: 1, color: black }], 1);
+  const geometry = patternGridGeometry(pattern, { showAxes: false, cellSize: 22, axisWidth: 38, axisHeight: 22 });
+  const noop = () => undefined;
+
+  return renderToStaticMarkup(
+    createElement(
+      I18nProvider,
+      null,
+      createElement(PatternGridBoard, {
+        pattern,
+        previewOptions: { showAxes: false, showCodes, showGrid: true },
+        xLabels: [1],
+        gridRef: createRef<HTMLDivElement>(),
+        viewportRef: createRef<HTMLDivElement>(),
+        cellIdPrefix: "test-grid",
+        activeCellId: "test-grid-cell-0",
+        geometry,
+        scaledWidth: geometry.totalWidth,
+        scaledHeight: geometry.totalHeight,
+        effectiveScale: 1,
+        editTool: "view",
+        isPanning: false,
+        colorFocusEditedAwayCellMarkers: new Map([[0, { type: "paint" as const, colorCode: white.code, colorCss: "rgb(255 255 255)", colorFgCss: "rgb(0 0 0)" }]]),
+        onPointerDown: noop,
+        onPointerMove: noop,
+        onPointerUp: noop,
+        onPointerLeave: noop,
+        onPointerCancel: noop,
+        onFocus: noop,
+        onKeyDown: noop,
+      }),
+    ),
+  );
 }
 
 describe("pattern grid row memoization helpers", () => {
@@ -106,5 +145,10 @@ describe("pattern grid row memoization helpers", () => {
     expect(nextRows).toHaveLength(100);
     expect(reusedRows).toHaveLength(99);
     expect(nextRows[42]).not.toBe(previousRows[42]);
+  });
+
+  it("hides edited-away paint marker codes when pattern codes are hidden", () => {
+    expect(renderBoardWithEditedAwayPaintMarker(false)).not.toContain(`data-color-focus-edited-away-code="${white.code}"`);
+    expect(renderBoardWithEditedAwayPaintMarker(true)).toContain(`data-color-focus-edited-away-code="${white.code}"`);
   });
 });

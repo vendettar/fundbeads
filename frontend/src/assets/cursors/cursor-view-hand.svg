@@ -1,0 +1,9 @@
+<!-- lucide-react v1.23.0 - ISC license -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <g transform="translate(2 2) scale(0.83)" fill="#FFFFFF" stroke="#111111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+    <path d="M6.8 14.6V6.1a1.8 1.8 0 0 1 3.6 0v1.6a1.8 1.8 0 0 1 3.6.1v.8a1.8 1.8 0 0 1 3.6.4v1a1.8 1.8 0 0 1 3.6.3v4.1c0 4.3-3.1 7.5-7.6 7.5H12c-2.7 0-4.3-.8-5.8-2.3l-2.9-2.9a1.8 1.8 0 0 1 2.6-2.6Z" />
+    <path d="M10.4 7.7v5.1" />
+    <path d="M14 8.7v4.1" />
+    <path d="M17.6 10v2.8" />
+  </g>
+</svg>

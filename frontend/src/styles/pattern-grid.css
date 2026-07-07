@@ -3,18 +3,106 @@
   outline-offset: 4px;
 }
 
+.pattern-grid-board:focus-visible .pattern-cell[data-keyboard-active="true"]::before {
+  position: absolute;
+  top: 0.125rem;
+  right: 0.125rem;
+  z-index: var(--beads-layer-popover);
+  width: 0.375rem;
+  height: 0.375rem;
+  background: var(--beads-primary);
+  content: "";
+  pointer-events: none;
+}
+
+.pattern-grid-board {
+  --pattern-cursor-view: url("../assets/cursors/cursor-view-hand.svg") 10 10, grab;
+  --pattern-cursor-grabbing: url("../assets/cursors/cursor-view-grabbing.svg") 10 10, grabbing;
+  --pattern-cursor-paint: url("../assets/cursors/cursor-paintbrush.svg") 6 19, crosshair;
+  --pattern-cursor-pick: url("../assets/cursors/cursor-pipette.svg") 6 18, cell;
+  --pattern-cursor-erase: url("../assets/cursors/cursor-eraser.svg") 7 17, cell;
+  --pattern-cursor-replace: url("../assets/cursors/cursor-replace.svg") 12 12, alias;
+}
+
+.pattern-grid-board,
+.pattern-grid-board .pattern-cell,
+.pattern-grid-board .pattern-axis-label {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.pattern-grid-board[data-edit-tool="view"] {
+  cursor: var(--pattern-cursor-view);
+}
+
+.pattern-grid-board[data-edit-tool="paint"] {
+  cursor: var(--pattern-cursor-paint);
+}
+
+.pattern-grid-board[data-edit-tool="pick"] {
+  cursor: var(--pattern-cursor-pick);
+}
+
+.pattern-grid-board[data-edit-tool="erase"] {
+  cursor: var(--pattern-cursor-erase);
+}
+
+.pattern-grid-board[data-edit-tool="replace"] {
+  cursor: var(--pattern-cursor-replace);
+}
+
+.pattern-grid-board[data-panning="true"] {
+  cursor: var(--pattern-cursor-grabbing);
+}
+
 .pattern-grid-viewport {
   height: 62vh;
   min-height: 16.25rem;
 }
 
-.pattern-cell[data-keyboard-active="true"] {
-  box-shadow: inset 0 0 0 3px var(--beads-ring), inset 0 0 0 5px var(--beads-background);
-}
-
 .pattern-cell {
+  position: relative;
   width: 1.375rem;
   height: 1.375rem;
+  overflow: hidden;
+}
+
+.pattern-grid-board[data-color-focus="active"] .pattern-cell {
+  background-color: var(--beads-background) !important;
+  color: transparent !important;
+}
+
+.pattern-grid-board[data-color-focus="active"] .pattern-cell.is-focused-color {
+  background-color: var(--pattern-cell-bg) !important;
+  color: var(--pattern-cell-fg) !important;
+}
+
+.pattern-grid-board[data-color-focus="active"] .pattern-cell[data-color-focus-edited-away]::after {
+  position: absolute;
+  inset: 0.25rem;
+  content: "";
+  pointer-events: none;
+}
+
+.pattern-grid-board[data-color-focus="active"] .pattern-cell[data-color-focus-edited-away="erase"]::after {
+  border: 1px dashed color-mix(in srgb, var(--beads-foreground) 38%, transparent);
+  background:
+    linear-gradient(135deg, transparent 42%, color-mix(in srgb, var(--beads-primary) 44%, transparent) 42% 58%, transparent 58%);
+  opacity: 0.58;
+}
+
+.pattern-grid-board[data-color-focus="active"] .pattern-cell[data-color-focus-edited-away="paint"]::after {
+  display: grid;
+  place-items: center;
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--pattern-cell-edited-away-color) 58%, var(--beads-foreground) 16%);
+  background: var(--pattern-cell-edited-away-color);
+  color: var(--pattern-cell-edited-away-fg);
+  content: attr(data-color-focus-edited-away-code);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.5rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .pattern-guide-x-major {

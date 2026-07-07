@@ -1,10 +1,13 @@
-import type { KeyboardEventHandler, PointerEventHandler, RefObject } from "react";
+import type { CSSProperties, KeyboardEventHandler, PointerEventHandler, RefObject } from "react";
 import { memo, useEffect, useMemo, useRef } from "react";
 
 import { useI18n } from "./i18n";
 import { isPatternAxisLabelEmphasized, type PatternGridGeometry, type PatternPreviewOptions } from "./pattern-grid-geometry";
 import { buildPatternRenderModel, patternRenderRowCellsEqual, type PatternCellRenderModel, type PatternRenderRowModel } from "./pattern-render-model";
+import type { PatternEditTool } from "./pattern-edit";
 import { readableTextColor, type Pattern } from "./pattern";
+
+type PatternGridColorFocusEditedAwayCellMarker = { type: "erase" } | { type: "paint"; colorCode: string; colorCss: string; colorFgCss: string };
 
 type PatternGridBoardProps = {
   pattern: Pattern;
@@ -18,6 +21,9 @@ type PatternGridBoardProps = {
   scaledWidth: number;
   scaledHeight: number;
   effectiveScale: number;
+  editTool: PatternEditTool;
+  isPanning: boolean;
+  colorFocusEditedAwayCellMarkers: ReadonlyMap<number, PatternGridColorFocusEditedAwayCellMarker>;
   onPointerDown: PointerEventHandler<HTMLDivElement>;
   onPointerMove: PointerEventHandler<HTMLDivElement>;
   onPointerUp: PointerEventHandler<HTMLDivElement>;
@@ -35,6 +41,7 @@ type PatternRowProps = {
   showCodes: boolean;
   showAxes: boolean;
   cellIdPrefix: string;
+  colorFocusEditedAwayCellMarkers: ReadonlyMap<number, PatternGridColorFocusEditedAwayCellMarker>;
 };
 
 export function PatternGridBoard({
@@ -49,6 +56,9 @@ export function PatternGridBoard({
   scaledWidth,
   scaledHeight,
   effectiveScale,
+  editTool,
+  isPanning,
+  colorFocusEditedAwayCellMarkers,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -74,6 +84,8 @@ export function PatternGridBoard({
             aria-rowcount={pattern.height}
             aria-colcount={pattern.width}
             aria-activedescendant={activeCellId}
+            data-edit-tool={editTool}
+            data-panning={isPanning ? "true" : undefined}
             tabIndex={0}
             className="pattern-grid-board grid origin-top-left"
             onPointerDown={onPointerDown}
@@ -111,6 +123,7 @@ export function PatternGridBoard({
                 showCodes={previewOptions.showCodes}
                 showAxes={previewOptions.showAxes}
                 cellIdPrefix={cellIdPrefix}
+                colorFocusEditedAwayCellMarkers={colorFocusEditedAwayCellMarkers}
               />
             ))}
 
@@ -138,6 +151,7 @@ const PatternRow = memo(function PatternRow({
   showCodes,
   showAxes,
   cellIdPrefix,
+  colorFocusEditedAwayCellMarkers,
 }: PatternRowProps) {
   const { paletteLabel, t } = useI18n();
 
@@ -150,6 +164,7 @@ const PatternRow = memo(function PatternRow({
         const xGuide = cellModel.xGuide;
         const yGuide = cellModel.yGuide;
         const cellColor = cell.color;
+        const colorFocusEditedAwayMarker = colorFocusEditedAwayCellMarkers.get(cellIndex);
         const cellLabel = cellColor ? t("cellTitle", { x: cell.x, y: cell.y, code: cellColor.code, label: paletteLabel(cellColor) }) : t("cellNoBeadTitle", { x: cell.x, y: cell.y });
 
         return (
@@ -162,6 +177,8 @@ const PatternRow = memo(function PatternRow({
             aria-colindex={cell.x}
             data-cell-index={cellIndex}
             data-color-code={cellColor?.code}
+            data-color-focus-edited-away={colorFocusEditedAwayMarker?.type}
+            data-color-focus-edited-away-code={showCodes && colorFocusEditedAwayMarker?.type === "paint" ? colorFocusEditedAwayMarker.colorCode : undefined}
             data-x={cell.x}
             data-y={cell.y}
             className={[
@@ -173,9 +190,13 @@ const PatternRow = memo(function PatternRow({
               showGrid && yGuide === "minor" ? "border-b-2 border-b-black/70 border-b-dashed" : "",
             ].join(" ")}
             style={{
-              backgroundColor: cellColor ? `rgb(${cellColor.r} ${cellColor.g} ${cellColor.b})` : "var(--beads-background)",
-              color: showCodes && cellColor ? readableTextColor(cellColor) : "transparent",
-            }}
+              "--pattern-cell-bg": cellColor ? `rgb(${cellColor.r} ${cellColor.g} ${cellColor.b})` : "var(--beads-background)",
+              "--pattern-cell-fg": showCodes && cellColor ? readableTextColor(cellColor) : "transparent",
+              "--pattern-cell-edited-away-color": colorFocusEditedAwayMarker?.type === "paint" ? colorFocusEditedAwayMarker.colorCss : undefined,
+              "--pattern-cell-edited-away-fg": colorFocusEditedAwayMarker?.type === "paint" ? colorFocusEditedAwayMarker.colorFgCss : undefined,
+              backgroundColor: "var(--pattern-cell-bg)",
+              color: "var(--pattern-cell-fg)",
+            } as CSSProperties}
             title={cellLabel}
           >
             {showCodes && cellColor ? cellColor.code : null}
@@ -203,8 +224,34 @@ function arePatternRowPropsEqual(previousProps: PatternRowProps, nextProps: Patt
     previousProps.showCodes === nextProps.showCodes &&
     previousProps.showAxes === nextProps.showAxes &&
     previousProps.cellIdPrefix === nextProps.cellIdPrefix &&
+    patternGridRowMarkersEqual(nextProps.cells, previousProps.colorFocusEditedAwayCellMarkers, nextProps.colorFocusEditedAwayCellMarkers) &&
     (previousProps.cells === nextProps.cells || patternRenderRowCellsEqual(previousProps.cells, nextProps.cells))
   );
+}
+
+function patternGridRowMarkersEqual(
+  cells: readonly PatternCellRenderModel[],
+  previousMarkers: ReadonlyMap<number, PatternGridColorFocusEditedAwayCellMarker>,
+  nextMarkers: ReadonlyMap<number, PatternGridColorFocusEditedAwayCellMarker>,
+): boolean {
+  if (previousMarkers === nextMarkers) {
+    return true;
+  }
+
+  return cells.every((cell) => patternGridMarkerEqual(previousMarkers.get(cell.cellIndex), nextMarkers.get(cell.cellIndex)));
+}
+
+function patternGridMarkerEqual(first: PatternGridColorFocusEditedAwayCellMarker | undefined, second: PatternGridColorFocusEditedAwayCellMarker | undefined): boolean {
+  if (first === second) {
+    return true;
+  }
+  if (!first || !second || first.type !== second.type) {
+    return false;
+  }
+  if (first.type === "erase" || second.type === "erase") {
+    return true;
+  }
+  return first.colorCode === second.colorCode && first.colorCss === second.colorCss && first.colorFgCss === second.colorFgCss;
 }
 
 function usePatternGridRowModels(pattern: Pattern, geometry: PatternGridGeometry): readonly PatternRenderRowModel[] {
