@@ -1,4 +1,5 @@
-import { isPatternAxisLabelEmphasized, patternGridGeometry, patternGuideLevel, type PatternPreviewOptions } from "./pattern-grid-geometry";
+import { patternGridGeometry, type PatternPreviewOptions } from "./pattern-grid-geometry";
+import { buildPatternRenderModel, type PatternGridRenderLine } from "./pattern-render-model";
 import { readableTextColor, type Pattern } from "./pattern";
 
 export type PatternExportPreviewOptions = PatternPreviewOptions;
@@ -51,9 +52,7 @@ function drawCenteredText(ctx: CanvasRenderingContext2D, text: string, x: number
   ctx.fillText(text, x, y, maxWidth);
 }
 
-function drawAxisCell(ctx: CanvasRenderingContext2D, label: number, x: number, y: number, width: number, height: number, showGrid: boolean) {
-  const major = isPatternAxisLabelEmphasized(label);
-
+function drawAxisCell(ctx: CanvasRenderingContext2D, label: number, x: number, y: number, width: number, height: number, major: boolean, showGrid: boolean) {
   ctx.fillStyle = axisBackground;
   ctx.fillRect(x, y, width, height);
   ctx.fillStyle = major ? axisMajorText : axisText;
@@ -65,21 +64,9 @@ function drawAxisCell(ctx: CanvasRenderingContext2D, label: number, x: number, y
   }
 }
 
-function drawGrid(ctx: CanvasRenderingContext2D, pattern: Pattern, originX: number, originY: number, cellSize: number) {
-  const gridWidth = pattern.width * cellSize;
-  const gridHeight = pattern.height * cellSize;
-
-  for (let column = 0; column <= pattern.width; column += 1) {
-    const x = originX + column * cellSize;
-    const guideLevel = patternGuideLevel(column);
-    line(ctx, x, originY, x, originY + gridHeight, guideLevel === "major" ? 3 : guideLevel === "minor" ? 2 : 1, guideLevel === "major" ? majorLine : guideLevel === "minor" ? helperLine : gridLine, guideLevel === "minor");
-  }
-
-  for (let row = 0; row <= pattern.height; row += 1) {
-    const y = originY + row * cellSize;
-    const guideLevel = patternGuideLevel(row);
-    line(ctx, originX, y, originX + gridWidth, y, guideLevel === "major" ? 3 : guideLevel === "minor" ? 2 : 1, guideLevel === "major" ? majorLine : guideLevel === "minor" ? helperLine : gridLine, guideLevel === "minor");
-  }
+function drawGridLine(ctx: CanvasRenderingContext2D, gridLineModel: PatternGridRenderLine) {
+  const { guideLevel } = gridLineModel;
+  line(ctx, gridLineModel.x1, gridLineModel.y1, gridLineModel.x2, gridLineModel.y2, guideLevel === "major" ? 3 : guideLevel === "minor" ? 2 : 1, guideLevel === "major" ? majorLine : guideLevel === "minor" ? helperLine : gridLine, guideLevel === "minor");
 }
 
 export function renderPatternExportCanvas(pattern: Pattern, options: PatternExportRenderOptions): HTMLCanvasElement {
@@ -90,6 +77,7 @@ export function renderPatternExportCanvas(pattern: Pattern, options: PatternExpo
     axisWidth: Math.max(44, Math.round(cellSize * 1.5)),
     axisHeight: cellSize,
   });
+  const renderModel = buildPatternRenderModel(pattern, geometry);
   const canvas = document.createElement("canvas");
 
   canvas.width = geometry.totalWidth;
@@ -113,38 +101,25 @@ export function renderPatternExportCanvas(pattern: Pattern, options: PatternExpo
     ctx.fillRect(0, geometry.originY + geometry.gridHeight, geometry.axisWidth, geometry.axisHeight);
     ctx.fillRect(geometry.originX + geometry.gridWidth, geometry.originY + geometry.gridHeight, geometry.axisWidth, geometry.axisHeight);
 
-    for (let column = 1; column <= pattern.width; column += 1) {
-      const x = geometry.originX + (column - 1) * geometry.cellSize;
-      drawAxisCell(ctx, column, x, 0, geometry.cellSize, geometry.axisHeight, options.showGrid);
-      drawAxisCell(ctx, column, x, geometry.originY + geometry.gridHeight, geometry.cellSize, geometry.axisHeight, options.showGrid);
-    }
-
-    for (let row = 1; row <= pattern.height; row += 1) {
-      const y = geometry.originY + (row - 1) * geometry.cellSize;
-      drawAxisCell(ctx, row, 0, y, geometry.axisWidth, geometry.cellSize, options.showGrid);
-      drawAxisCell(ctx, row, geometry.originX + geometry.gridWidth, y, geometry.axisWidth, geometry.cellSize, options.showGrid);
+    for (const axisCell of renderModel.axisCells) {
+      drawAxisCell(ctx, axisCell.label, axisCell.x, axisCell.y, axisCell.width, axisCell.height, axisCell.major, options.showGrid);
     }
   }
 
-  for (let row = 0; row < pattern.height; row += 1) {
-    for (let column = 0; column < pattern.width; column += 1) {
-      const cell = pattern.cells[row * pattern.width + column];
-      const cellColor = cell?.color ?? null;
-      const x = geometry.originX + column * geometry.cellSize;
-      const y = geometry.originY + row * geometry.cellSize;
+  for (const cellModel of renderModel.cells) {
+    const cellColor = cellModel.cell.color;
 
-      ctx.fillStyle = cellColor ? rgb(cellColor) : exportBackground;
-      ctx.fillRect(x, y, geometry.cellSize, geometry.cellSize);
+    ctx.fillStyle = cellColor ? rgb(cellColor) : exportBackground;
+    ctx.fillRect(cellModel.x, cellModel.y, cellModel.width, cellModel.height);
 
-      if (cellColor && options.showCodes) {
-        ctx.fillStyle = readableTextColor(cellColor);
-        drawCenteredText(ctx, cellColor.code, x + geometry.cellSize / 2, y + geometry.cellSize / 2, geometry.cellSize - 5, 12, 8);
-      }
+    if (cellColor && options.showCodes) {
+      ctx.fillStyle = readableTextColor(cellColor);
+      drawCenteredText(ctx, cellColor.code, cellModel.x + cellModel.width / 2, cellModel.y + cellModel.height / 2, cellModel.width - 5, 12, 8);
     }
   }
 
   if (options.showGrid) {
-    drawGrid(ctx, pattern, geometry.originX, geometry.originY, geometry.cellSize);
+    renderModel.gridLines.forEach((gridLineModel) => drawGridLine(ctx, gridLineModel));
   }
 
   return canvas;

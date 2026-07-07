@@ -35,6 +35,7 @@ import type { Pattern } from "./pattern";
 const baseCellSize = 22;
 const baseAxisWidth = 38;
 const gridViewportPadding = 24;
+const mardPaletteByCode = new Map(mardPalette.map((color) => [color.code, color]));
 
 type PatternEditStateUpdater = (currentState: PatternEditState) => PatternEditState;
 type PatternEditStroke = {
@@ -68,14 +69,19 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
   const [previewOptions, setPreviewOptions] = useState(defaultPatternPreviewOptions);
   const [exportFormat, setExportFormat] = useState<PatternExportFormat | null>(null);
   const [exportFailed, setExportFailed] = useState(false);
-  const focusRules = useMemo(() => patternGridFocusRules(pattern.usage.map(({ color }) => color.code)), [pattern.usage]);
-
-  const geometry = patternGridGeometry(pattern, {
-    showAxes: previewOptions.showAxes,
-    cellSize: baseCellSize,
-    axisWidth: baseAxisWidth,
-    axisHeight: baseCellSize,
-  });
+  const usageColorCodes = useMemo(() => pattern.usage.map(({ color }) => color.code), [pattern.usage]);
+  const focusRules = useMemo(() => patternGridFocusRules(usageColorCodes), [usageColorCodes]);
+  const sourceColorCodes = useMemo(() => new Set(usageColorCodes), [usageColorCodes]);
+  const geometry = useMemo(
+    () =>
+      patternGridGeometry(pattern, {
+        showAxes: previewOptions.showAxes,
+        cellSize: baseCellSize,
+        axisWidth: baseAxisWidth,
+        axisHeight: baseCellSize,
+      }),
+    [pattern, previewOptions.showAxes],
+  );
   const baseWidth = geometry.totalWidth;
   const baseHeight = geometry.totalHeight;
   const availableWidth = Math.max(1, viewportSize.width - gridViewportPadding);
@@ -85,10 +91,9 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
   const scaledWidth = baseWidth * effectiveScale;
   const scaledHeight = baseHeight * effectiveScale;
   const zoomLabel = `${Math.round(zoom * 100)}%`;
-  const activeColor = mardPalette.find((color) => color.code === editState.activeColorCode) ?? mardPalette[0];
+  const activeColor = mardPaletteByCode.get(editState.activeColorCode) ?? mardPalette[0];
   const replaceSourceColor = pattern.usage.find(({ color }) => color.code === replaceSourceCode)?.color;
-  const replaceTargetColor = mardPalette.find((color) => color.code === replaceTargetCode);
-  const sourceColorCodes = useMemo(() => new Set(pattern.usage.map(({ color }) => color.code)), [pattern.usage]);
+  const replaceTargetColor = mardPaletteByCode.get(replaceTargetCode);
   const canUndo = editState.undoStack.length > 0;
   const canRedo = editState.redoStack.length > 0;
   const hasManualEdits = Object.keys(editState.overrides).length > 0;
@@ -178,7 +183,10 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
       if (!viewport) {
         return;
       }
-      setViewportSize({ width: viewport.clientWidth, height: viewport.clientHeight });
+      setViewportSize((currentSize) => {
+        const nextSize = { width: viewport.clientWidth, height: viewport.clientHeight };
+        return currentSize.width === nextSize.width && currentSize.height === nextSize.height ? currentSize : nextSize;
+      });
     }
 
     updateViewportSize();
@@ -213,7 +221,7 @@ export function PatternGrid({ pattern, editState, onEditStateChange, xLabels, gr
     if (defaultSourceCode && !sourceColorCodes.has(replaceSourceCode)) {
       setReplaceSourceCode(defaultSourceCode);
     }
-    if (!mardPalette.some((color) => color.code === replaceTargetCode)) {
+    if (!mardPaletteByCode.has(replaceTargetCode)) {
       setReplaceTargetCode(editState.activeColorCode);
     }
   }, [editState.activeColorCode, pattern.usage, replaceSourceCode, replaceTargetCode, sourceColorCodes]);

@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { BeadColor } from "../src/palette";
 import type { Pattern, PatternCell } from "../src/pattern";
 import { buildPatternGridRowModels, patternGridRowCellsRenderEqual } from "../src/pattern-grid-board";
+import { patternGridGeometry } from "../src/pattern-grid-geometry";
+import type { PatternRenderRowModel } from "../src/pattern-render-model";
 
 const black: BeadColor = { code: "B1", label: "Black", r: 0, g: 0, b: 0 };
 const white: BeadColor = { code: "A1", label: "White", r: 255, g: 255, b: 255 };
@@ -25,9 +27,17 @@ function createCells(width: number, height: number): PatternCell[] {
   }));
 }
 
+function geometryFor(pattern: Pattern) {
+  return patternGridGeometry(pattern, { showAxes: true, cellSize: 22, axisWidth: 38, axisHeight: 22 });
+}
+
+function buildRows(pattern: Pattern, previousRows: readonly PatternRenderRowModel[] = []) {
+  return buildPatternGridRowModels(pattern, geometryFor(pattern), previousRows);
+}
+
 describe("pattern grid row memoization helpers", () => {
   it("builds row-local models with stable row indexes and cell ranges", () => {
-    const rows = buildPatternGridRowModels(createPattern(createCells(3, 2), 3));
+    const rows = buildRows(createPattern(createCells(3, 2), 3));
 
     expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({ row: 1, startCellIndex: 0 });
@@ -39,16 +49,18 @@ describe("pattern grid row memoization helpers", () => {
   it("treats rows with the same rendered cell values as unchanged", () => {
     const cells = createCells(3, 2);
     const sameRenderedCells = cells.map((cell) => ({ ...cell, color: cell.color ? { ...cell.color } : null }));
+    const previousRows = buildRows(createPattern(cells, 3));
+    const nextRows = buildRows(createPattern(sameRenderedCells, 3));
 
-    expect(patternGridRowCellsRenderEqual(cells, sameRenderedCells)).toBe(true);
+    expect(patternGridRowCellsRenderEqual(previousRows[0].cells, nextRows[0].cells)).toBe(true);
   });
 
   it("reuses unchanged row models when one effective row changes", () => {
     const cells = createCells(3, 2);
-    const previousRows = buildPatternGridRowModels(createPattern(cells, 3));
+    const previousRows = buildRows(createPattern(cells, 3));
     const nextCells = [...cells];
     nextCells[3] = { ...nextCells[3], color: black };
-    const nextRows = buildPatternGridRowModels(createPattern(nextCells, 3), previousRows);
+    const nextRows = buildRows(createPattern(nextCells, 3), previousRows);
 
     expect(nextRows[0]).toBe(previousRows[0]);
     expect(nextRows[1]).not.toBe(previousRows[1]);
@@ -58,10 +70,10 @@ describe("pattern grid row memoization helpers", () => {
     const cells = createCells(3, 2);
     const firstEditCells = [...cells];
     firstEditCells[3] = { ...firstEditCells[3], color: black };
-    const firstEditRows = buildPatternGridRowModels(createPattern(firstEditCells, 3));
+    const firstEditRows = buildRows(createPattern(firstEditCells, 3));
     const secondEditCells = firstEditCells.map((cell, index) => (index === 3 ? { ...cell, color: { ...black } } : cell));
     secondEditCells[1] = { ...secondEditCells[1], color: black };
-    const secondEditRows = buildPatternGridRowModels(createPattern(secondEditCells, 3), firstEditRows);
+    const secondEditRows = buildRows(createPattern(secondEditCells, 3), firstEditRows);
 
     expect(secondEditRows[0]).not.toBe(firstEditRows[0]);
     expect(secondEditRows[1]).toBe(firstEditRows[1]);
@@ -71,12 +83,28 @@ describe("pattern grid row memoization helpers", () => {
     const cells = createCells(3, 2);
     const noBeadCells = [...cells];
     noBeadCells[0] = { ...noBeadCells[0], color: null };
+    const previousComparableRows = buildRows(createPattern(cells, 3));
+    const noBeadComparableRows = buildRows(createPattern(noBeadCells, 3));
 
-    expect(patternGridRowCellsRenderEqual(cells.slice(0, 3), noBeadCells.slice(0, 3))).toBe(false);
+    expect(patternGridRowCellsRenderEqual(previousComparableRows[0].cells, noBeadComparableRows[0].cells)).toBe(false);
 
-    const previousRows = buildPatternGridRowModels(createPattern(cells, 3, 2));
-    const nextRows = buildPatternGridRowModels(createPattern(cells, 2, 3), previousRows);
+    const previousRows = buildRows(createPattern(cells, 3, 2));
+    const nextRows = buildRows(createPattern(cells, 2, 3), previousRows);
 
     expect(nextRows[0]).not.toBe(previousRows[0]);
+  });
+
+  it("keeps 100x100 row-model churn bounded to the changed row", () => {
+    const cells = createCells(100, 100);
+    const previousRows = buildRows(createPattern(cells, 100));
+    const nextCells = [...cells];
+    nextCells[4_242] = { ...nextCells[4_242], color: null };
+    const nextRows = buildRows(createPattern(nextCells, 100), previousRows);
+    const reusedRows = nextRows.filter((row, index) => row === previousRows[index]);
+
+    expect(previousRows).toHaveLength(100);
+    expect(nextRows).toHaveLength(100);
+    expect(reusedRows).toHaveLength(99);
+    expect(nextRows[42]).not.toBe(previousRows[42]);
   });
 });

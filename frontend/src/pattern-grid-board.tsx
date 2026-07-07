@@ -2,8 +2,9 @@ import type { KeyboardEventHandler, PointerEventHandler, RefObject } from "react
 import { memo, useEffect, useMemo, useRef } from "react";
 
 import { useI18n } from "./i18n";
-import { isPatternAxisLabelEmphasized, patternGuideLevel, type PatternGridGeometry, type PatternPreviewOptions } from "./pattern-grid-geometry";
-import { readableTextColor, type Pattern, type PatternCell } from "./pattern";
+import { isPatternAxisLabelEmphasized, type PatternGridGeometry, type PatternPreviewOptions } from "./pattern-grid-geometry";
+import { buildPatternRenderModel, patternRenderRowCellsEqual, type PatternCellRenderModel, type PatternRenderRowModel } from "./pattern-render-model";
+import { readableTextColor, type Pattern } from "./pattern";
 
 type PatternGridBoardProps = {
   pattern: Pattern;
@@ -29,7 +30,7 @@ type PatternGridBoardProps = {
 type PatternRowProps = {
   row: number;
   startCellIndex: number;
-  cells: readonly PatternCell[];
+  cells: readonly PatternCellRenderModel[];
   showGrid: boolean;
   showCodes: boolean;
   showAxes: boolean;
@@ -58,10 +59,10 @@ export function PatternGridBoard({
 }: PatternGridBoardProps) {
   const { t } = useI18n();
   const keyboardHintId = `${cellIdPrefix}-keyboard-hint`;
-  const rowModels = usePatternGridRowModels(pattern);
+  const rowModels = usePatternGridRowModels(pattern, geometry);
 
   return (
-    <div ref={viewportRef} className="h-[62vh] min-h-[260px] overflow-auto bg-card xl:h-auto xl:min-h-0 xl:flex-1">
+    <div ref={viewportRef} className="pattern-grid-viewport overflow-auto bg-card">
       <p id={keyboardHintId} className="sr-only">{t("patternGridKeyboardHint")}</p>
       <div className="flex min-h-full min-w-full p-3">
         <div className="m-auto shrink-0" style={{ width: scaledWidth, height: scaledHeight }}>
@@ -143,10 +144,11 @@ const PatternRow = memo(function PatternRow({
   return (
     <>
       {showAxes ? <AxisCell label={row} major={isPatternAxisLabelEmphasized(row)} showGrid={showGrid} /> : null}
-      {cells.map((cell, cellOffset) => {
-        const cellIndex = startCellIndex + cellOffset;
-        const xGuide = patternGuideLevel(cell.x);
-        const yGuide = patternGuideLevel(cell.y);
+      {cells.map((cellModel, cellOffset) => {
+        const cell = cellModel.cell;
+        const cellIndex = cellModel.cellIndex;
+        const xGuide = cellModel.xGuide;
+        const yGuide = cellModel.yGuide;
         const cellColor = cell.color;
         const cellLabel = cellColor ? t("cellTitle", { x: cell.x, y: cell.y, code: cellColor.code, label: paletteLabel(cellColor) }) : t("cellNoBeadTitle", { x: cell.x, y: cell.y });
 
@@ -165,9 +167,9 @@ const PatternRow = memo(function PatternRow({
             className={[
               "pattern-cell pattern-cell-code grid place-items-center font-mono font-bold leading-none",
               showGrid ? "border-b border-r border-black/40" : "",
-              showGrid && xGuide === "major" ? "border-r-[3px] border-r-black" : "",
+              showGrid && xGuide === "major" ? "pattern-guide-x-major" : "",
               showGrid && xGuide === "minor" ? "border-r-2 border-r-black/70 border-r-dashed" : "",
-              showGrid && yGuide === "major" ? "border-b-[3px] border-b-black" : "",
+              showGrid && yGuide === "major" ? "pattern-guide-y-major" : "",
               showGrid && yGuide === "minor" ? "border-b-2 border-b-black/70 border-b-dashed" : "",
             ].join(" ")}
             style={{
@@ -188,41 +190,10 @@ const PatternRow = memo(function PatternRow({
 export type PatternGridRowModel = {
   row: number;
   startCellIndex: number;
-  cells: readonly PatternCell[];
+  cells: readonly PatternCellRenderModel[];
 };
 
-export function buildPatternGridRowModels(pattern: Pattern, previousRows: readonly PatternGridRowModel[] = []): PatternGridRowModel[] {
-  return Array.from({ length: pattern.height }, (_, rowIndex) => {
-    const row = rowIndex + 1;
-    const startCellIndex = rowIndex * pattern.width;
-    const cells = pattern.cells.slice(startCellIndex, startCellIndex + pattern.width);
-    const previousRow = previousRows[rowIndex];
-
-    if (
-      previousRow?.row === row &&
-      previousRow.startCellIndex === startCellIndex &&
-      patternGridRowCellsRenderEqual(previousRow.cells, cells)
-    ) {
-      return previousRow;
-    }
-
-    return { row, startCellIndex, cells };
-  });
-}
-
-export function patternGridRowCellsRenderEqual(previousCells: readonly PatternCell[], nextCells: readonly PatternCell[]): boolean {
-  if (previousCells.length !== nextCells.length) {
-    return false;
-  }
-
-  for (let index = 0; index < previousCells.length; index += 1) {
-    if (!patternGridCellsRenderEqual(previousCells[index], nextCells[index])) {
-      return false;
-    }
-  }
-
-  return true;
-}
+export { buildPatternRenderRows as buildPatternGridRowModels, patternRenderRowCellsEqual as patternGridRowCellsRenderEqual } from "./pattern-render-model";
 
 function arePatternRowPropsEqual(previousProps: PatternRowProps, nextProps: PatternRowProps): boolean {
   return (
@@ -232,38 +203,20 @@ function arePatternRowPropsEqual(previousProps: PatternRowProps, nextProps: Patt
     previousProps.showCodes === nextProps.showCodes &&
     previousProps.showAxes === nextProps.showAxes &&
     previousProps.cellIdPrefix === nextProps.cellIdPrefix &&
-    (previousProps.cells === nextProps.cells || patternGridRowCellsRenderEqual(previousProps.cells, nextProps.cells))
+    (previousProps.cells === nextProps.cells || patternRenderRowCellsEqual(previousProps.cells, nextProps.cells))
   );
 }
 
-function usePatternGridRowModels(pattern: Pattern): readonly PatternGridRowModel[] {
-  const previousRowsRef = useRef<readonly PatternGridRowModel[]>([]);
-  const rowModels = useMemo(() => buildPatternGridRowModels(pattern, previousRowsRef.current), [pattern]);
+function usePatternGridRowModels(pattern: Pattern, geometry: PatternGridGeometry): readonly PatternRenderRowModel[] {
+  const previousRowsRef = useRef<readonly PatternRenderRowModel[]>([]);
+  const renderModel = useMemo(() => buildPatternRenderModel(pattern, geometry, previousRowsRef.current), [geometry, pattern]);
+  const rowModels = renderModel.rows;
 
   useEffect(() => {
     previousRowsRef.current = rowModels;
   }, [rowModels]);
 
   return rowModels;
-}
-
-function patternGridCellsRenderEqual(previousCell: PatternCell | undefined, nextCell: PatternCell | undefined): boolean {
-  if (!previousCell || !nextCell) {
-    return previousCell === nextCell;
-  }
-
-  const previousColor = previousCell.color;
-  const nextColor = nextCell.color;
-
-  return (
-    previousCell.x === nextCell.x &&
-    previousCell.y === nextCell.y &&
-    previousColor?.code === nextColor?.code &&
-    previousColor?.label === nextColor?.label &&
-    previousColor?.r === nextColor?.r &&
-    previousColor?.g === nextColor?.g &&
-    previousColor?.b === nextColor?.b
-  );
 }
 
 function AxisCell({ label, major, showGrid }: { label: number; major: boolean; showGrid: boolean }) {
